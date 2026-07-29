@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@dev-cli/config": ["../config/src"],
+      "@dev-cli/config/*": ["../config/src/*"],
+      "@dev-cli/ui": ["../ui/src"],
+      "@dev-cli/ui/*": ["../ui/src/*"]
+    }
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@dev-cli/cli",
+  "version": "0.0.0",
+  "description": "Dev CLI — the Raycast of the Terminal for Developers",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "dev": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@dev-cli/core": "workspace:*",
+    "@dev-cli/config": "workspace:*",
+    "@dev-cli/ui": "workspace:*",
+    "@dev-cli/plugin-doctor": "workspace:*",
+    "@dev-cli/plugin-ports": "workspace:*",
+    "@dev-cli/plugin-docker": "workspace:*",
+    "@dev-cli/plugin-git": "workspace:*",
+    "@dev-cli/plugin-jwt": "workspace:*",
+    "@dev-cli/plugin-json": "workspace:*",
+    "@dev-cli/plugin-uuid": "workspace:*",
+    "@dev-cli/plugin-qr": "workspace:*",
+    "@dev-cli/plugin-env": "workspace:*",
+    "@dev-cli/plugin-repo": "workspace:*",
+    "@dev-cli/plugin-ai": "workspace:*",
+    "commander": "^12.1.0",
+    "ink": "^5.0.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  }
+}

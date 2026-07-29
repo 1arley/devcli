@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@dev-cli/core": ["packages/core/src"],
+      "@dev-cli/core/*": ["packages/core/src/*"],
+      "@dev-cli/config": ["packages/config/src"],
+      "@dev-cli/config/*": ["packages/config/src/*"],
+      "@dev-cli/ui": ["packages/ui/src"],
+      "@dev-cli/ui/*": ["packages/ui/src/*"]
+    }
+  },
+  "include": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/config" },
+    { "path": "packages/ui" },
+    { "path": "packages/cli" },
+    { "path": "packages/plugins/doctor" },
+    { "path": "packages/plugins/ports" },
+    { "path": "packages/plugins/docker" },
+    { "path": "packages/plugins/git" },
+    { "path": "packages/plugins/jwt" },
+    { "path": "packages/plugins/json" },
+    { "path": "packages/plugins/uuid" },
+    { "path": "packages/plugins/qr" },
+    { "path": "packages/plugins/env" },
+    { "path": "packages/plugins/repo" },
+    { "path": "packages/plugins/ai" }
+  ]
+}
