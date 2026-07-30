@@ -4,8 +4,26 @@ import { symbols, withSpinner, createTable } from '@devcli/ui'
 import chalk from 'chalk'
 import { loadConfig, writeConfig } from '@devcli/config'
 import { execSync } from 'node:child_process'
-import * as readline from 'node:readline/promises'
+import * as readline from 'node:readline'
 import { stdin as processStdin, stdout as processStdout } from 'node:process'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+
+// Single shared readline interface across all prompts.
+// Re-creating + closing per prompt breaks sequential hidden input on modern Node.
+let _rl: readline.Interface | null = null
+let rlClosed = false
+function getRL(): readline.Interface {
+  if (!_rl || rlClosed) {
+    const rl = readline.createInterface({ input: processStdin, output: processStdout })
+    _rl = rl
+    rlClosed = false
+    rl.on('close', () => {
+      rlClosed = true
+    })
+  }
+  return _rl
+}
 
 interface ProviderInfo {
   name: string
@@ -115,35 +133,33 @@ function getProviderInfo(name: string): ProviderInfo {
 }
 
 async function ask(question: string, hidden: boolean = false): Promise<string> {
-  const rl = readline.createInterface({ input: processStdin, output: processStdout })
-  try {
-    if (hidden) {
-      processStdout.write(question)
-      return new Promise((resolve) => {
-        const buf: string[] = []
-        const onData = (chunk: Buffer) => {
-          const char = chunk.toString()
-          if (char === '\r' || char === '\n') {
-            processStdin.removeListener('data', onData)
-            rl.close()
-            processStdout.write('\n')
-            resolve(buf.join(''))
-          } else if (char === '\x7f' || char === '\b') {
+  const rl = getRL()
+  if (hidden) {
+    processStdout.write(question)
+    return new Promise((resolve) => {
+      const buf: string[] = []
+      const onData = (chunk: Buffer) => {
+        const char = chunk.toString()
+        if (char === '\r' || char === '\n') {
+          processStdin.removeListener('data', onData)
+          processStdout.write('\n')
+          resolve(buf.join(''))
+        } else if (char === '\x7f' || char === '\b') {
+          if (buf.length) {
             buf.pop()
             processStdout.write('\b \b')
-          } else {
-            buf.push(char)
-            processStdout.write('*')
           }
+        } else {
+          buf.push(char)
+          processStdout.write('*')
         }
-        processStdin.on('data', onData)
-      })
-    }
-    const answer = await rl.question(question)
-    return answer
-  } finally {
-    rl.close()
+      }
+      processStdin.on('data', onData)
+    })
   }
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => resolve(answer))
+  })
 }
 
 async function interactiveSetup(): Promise<void> {
@@ -208,12 +224,21 @@ async function interactiveSetup(): Promise<void> {
   console.log('')
 
   let model = info.defaultModel
-  const modelChoice = (await ask(`  ${chalk.dim('Enter number or "a" for default')} `)).trim()
-  const modelIdx = parseInt(modelChoice, 10) - 1
-  if (modelChoice === 'a' || modelChoice === '') {
-    model = info.defaultModel
-  } else if (modelIdx >= 0 && modelIdx < info.models.length) {
-    model = info.models[modelIdx]!
+  let modelChosen = false
+  while (!modelChosen) {
+    const modelChoice = (await ask(`  ${chalk.dim('Enter number or "a" for default')} `)).trim()
+    if (modelChoice === 'a' || modelChoice === '') {
+      model = info.defaultModel
+      modelChosen = true
+    } else {
+      const modelIdx = parseInt(modelChoice, 10) - 1
+      if (modelIdx >= 0 && modelIdx < info.models.length) {
+        model = info.models[modelIdx]!
+        modelChosen = true
+      } else {
+        console.log(chalk.red('  Invalid choice'))
+      }
+    }
   }
   await writeConfig('ai.model', model)
 
@@ -223,10 +248,14 @@ async function interactiveSetup(): Promise<void> {
   console.log(`  ${chalk.dim('Test it: dev ai test')}`)
 }
 
+function configFilePath(): string {
+  const home = process.env['HOME'] ?? ''
+  const local = join(process.cwd(), '.devclirc.json')
+  return existsSync(local) ? local : join(home, '.devclirc.json')
+}
+
 async function readConfigRaw(): Promise<Record<string, unknown>> {
   const { readFile } = await import('node:fs/promises')
-  const { existsSync } = await import('node:fs')
-  const { join } = await import('node:path')
   const home = process.env['HOME'] ?? ''
   const paths = [join(process.cwd(), '.devclirc.json'), join(home, '.devclirc.json')]
   for (const p of paths) {
@@ -243,9 +272,7 @@ async function readConfigRaw(): Promise<Record<string, unknown>> {
 
 async function writeConfigRaw(config: Record<string, unknown>): Promise<void> {
   const { writeFile } = await import('node:fs/promises')
-  const { join } = await import('node:path')
-  const home = process.env['HOME'] ?? ''
-  const path = join(home, '.devclirc.json')
+  const path = configFilePath()
   await writeFile(path, JSON.stringify(config, null, 2) + '\n')
 }
 
@@ -256,12 +283,11 @@ async function aiFetch(
   const config = await loadConfig()
   const provider = config.ai?.provider ?? 'openai'
   const apiKey = config.ai?.apiKey
-  const model = config.ai?.model ?? getProviderInfo(provider).defaultModel
   const info = getProviderInfo(provider)
-  const baseUrl = info.baseUrl
+  const model = config.ai?.model ?? info.defaultModel
+  const baseUrl = config.ai?.baseUrl ?? info.baseUrl
 
-  if (!apiKey && provider !== 'ollama' && provider !== 'custom') return null
-  if (!apiKey && provider === 'custom') return null
+  if (!apiKey && provider !== 'ollama') return null
 
   try {
     let url = `${baseUrl}/chat/completions`
@@ -580,7 +606,7 @@ export const createAiPlugin: PluginFactory = (): Plugin => ({
               Setting: 'API Key',
               Value: aiConfig.apiKey ? chalk.green('✓ Set') : chalk.red('✗ Missing'),
             },
-            { Setting: 'Endpoint', Value: chalk.dim(info.baseUrl) },
+            { Setting: 'Endpoint', Value: chalk.dim(aiConfig.baseUrl ?? info.baseUrl) },
           ],
         )
         console.log(table.toString())
@@ -608,10 +634,19 @@ export const createAiPlugin: PluginFactory = (): Plugin => ({
       })
 
     ai.argument('[input...]', 'Error text or stack trace').action(async (input: string[]) => {
-      const text = input.join(' ').trim()
+      let text = input.join(' ').trim()
+      if (!text && !processStdin.isTTY) {
+        text = await new Promise<string>((resolve) => {
+          let data = ''
+          processStdin.setEncoding('utf-8')
+          processStdin.on('data', (chunk) => (data += chunk))
+          processStdin.on('end', () => resolve(data.trim()))
+        })
+      }
       if (!text) {
         console.log(`${symbols.error} Provide an error message or pipe input`)
         console.log(chalk.gray('Usage: dev ai "TypeError: Cannot read property..."'))
+        console.log(chalk.gray('Or pipe: cat error.log | dev ai'))
         console.log(chalk.gray('Or configure AI: dev ai setup'))
         return
       }
