@@ -1,5 +1,5 @@
 {
-  "name": "@dev-cli/plugin-doctor",
+  "name": "@devcli/plugin-doctor",
   "version": "0.0.0",
   "description": "Dev CLI doctor plugin",
   "type": "module",
@@ -18,8 +18,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@dev-cli/core": "workspace:*",
-    "@dev-cli/ui": "workspace:*",
+    "@devcli/core": "workspace:*",
+    "@devcli/ui": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0"
   },

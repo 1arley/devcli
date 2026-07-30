@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { createTable, symbols, withSpinner } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { createTable, symbols, withSpinner } from '@devcli/ui'
 import chalk from 'chalk'
 import { execSync } from 'node:child_process'
 

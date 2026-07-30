@@ -1,5 +1,5 @@
 {
-  "name": "@dev-cli/ui",
+  "name": "@devcli/ui",
   "version": "0.0.0",
   "description": "Terminal UI components and utilities for Dev CLI",
   "type": "module",

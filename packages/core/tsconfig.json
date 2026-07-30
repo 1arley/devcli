@@ -3,10 +3,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@dev-cli/config": ["../config/src"],
-      "@dev-cli/config/*": ["../config/src/*"],
-      "@dev-cli/ui": ["../ui/src"],
-      "@dev-cli/ui/*": ["../ui/src/*"]
+      "@devcli/config": ["../config/src"],
+      "@devcli/config/*": ["../config/src/*"],
+      "@devcli/ui": ["../ui/src"],
+      "@devcli/ui/*": ["../ui/src/*"]
     }
   },
   "include": ["src"]

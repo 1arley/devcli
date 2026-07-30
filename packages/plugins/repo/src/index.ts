@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { infoBox, banner } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { infoBox, banner } from '@devcli/ui'
 import chalk from 'chalk'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'

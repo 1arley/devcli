@@ -3,12 +3,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@dev-cli/core": ["packages/core/src"],
-      "@dev-cli/core/*": ["packages/core/src/*"],
-      "@dev-cli/config": ["packages/config/src"],
-      "@dev-cli/config/*": ["packages/config/src/*"],
-      "@dev-cli/ui": ["packages/ui/src"],
-      "@dev-cli/ui/*": ["packages/ui/src/*"]
+      "@devcli/core": ["packages/core/src"],
+      "@devcli/core/*": ["packages/core/src/*"],
+      "@devcli/config": ["packages/config/src"],
+      "@devcli/config/*": ["packages/config/src/*"],
+      "@devcli/ui": ["packages/ui/src"],
+      "@devcli/ui/*": ["packages/ui/src/*"]
     }
   },
   "include": [],

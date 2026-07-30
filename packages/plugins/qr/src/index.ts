@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { symbols } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { symbols } from '@devcli/ui'
 import chalk from 'chalk'
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'

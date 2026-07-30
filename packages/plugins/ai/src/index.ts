@@ -1,8 +1,8 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { symbols, withSpinner } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { symbols, withSpinner } from '@devcli/ui'
 import chalk from 'chalk'
-import { loadConfig } from '@dev-cli/config'
+import { loadConfig } from '@devcli/config'
 
 async function explainError(input: string): Promise<string> {
   const config = await loadConfig()

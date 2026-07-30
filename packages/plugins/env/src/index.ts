@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { createTable, symbols } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { createTable, symbols } from '@devcli/ui'
 import chalk from 'chalk'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'

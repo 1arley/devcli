@@ -1,5 +1,5 @@
 {
-  "name": "@dev-cli/core",
+  "name": "@devcli/core",
   "version": "0.0.0",
   "description": "Core plugin system, registry, and shared types for Dev CLI",
   "type": "module",
@@ -18,8 +18,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@dev-cli/config": "workspace:*",
-    "@dev-cli/ui": "workspace:*",
+    "@devcli/config": "workspace:*",
+    "@devcli/ui": "workspace:*",
     "commander": "^12.1.0"
   },
   "devDependencies": {

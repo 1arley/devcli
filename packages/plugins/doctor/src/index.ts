@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { symbols } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { symbols } from '@devcli/ui'
 import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { platform, totalmem, freemem, cpus } from 'node:os'

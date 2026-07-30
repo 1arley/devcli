@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
-import { symbols, infoBox } from '@dev-cli/ui'
+import type { Plugin, PluginFactory } from '@devcli/core'
+import { symbols, infoBox } from '@devcli/ui'
 import chalk from 'chalk'
 
 function base64UrlDecode(str: string): string {

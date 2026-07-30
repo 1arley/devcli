@@ -26,9 +26,9 @@ export default defineConfig({
       ],
     },
     alias: {
-      '@dev-cli/core': resolve(__dirname, 'packages/core/src'),
-      '@dev-cli/config': resolve(__dirname, 'packages/config/src'),
-      '@dev-cli/ui': resolve(__dirname, 'tests/ui-stub.ts'),
+      '@devcli/core': resolve(__dirname, 'packages/core/src'),
+      '@devcli/config': resolve(__dirname, 'packages/config/src'),
+      '@devcli/ui': resolve(__dirname, 'tests/ui-stub.ts'),
       commander: resolve(__dirname, 'packages/plugins/jwt/node_modules/commander'),
       chalk: resolve(__dirname, 'packages/plugins/jwt/node_modules/chalk'),
     },

@@ -57,10 +57,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build base packages
-        run: pnpm --filter @dev-cli/config --filter @dev-cli/ui --filter @dev-cli/core run build
+        run: pnpm --filter @devcli/config --filter @devcli/ui --filter @devcli/core run build
 
       - name: Build plugins
-        run: pnpm --filter '@dev-cli/plugin-*' run build
+        run: pnpm --filter '@devcli/plugin-*' run build
 
       - name: Test
         run: pnpm test:coverage

@@ -1,5 +1,5 @@
 {
-  "name": "@dev-cli/config",
+  "name": "@devcli/config",
   "version": "0.0.0",
   "description": "Config schema, validation, and loading for Dev CLI",
   "type": "module",

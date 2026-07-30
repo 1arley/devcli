@@ -3,7 +3,7 @@ import { Command } from 'commander'
 
 // Mock loadConfig so explainError falls into local path deterministically.
 const loadConfigMock = vi.fn()
-vi.mock('@dev-cli/config', () => ({ loadConfig: loadConfigMock }))
+vi.mock('@devcli/config', () => ({ loadConfig: loadConfigMock }))
 
 // Mock global fetch to assert provider path behaviour.
 const fetchMock = vi.fn()

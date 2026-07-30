@@ -1,4 +1,4 @@
-// Lightweight stub of @dev-cli/ui for tests.
+// Lightweight stub of @devcli/ui for tests.
 // Avoids loading ink/react/yoga-wasm (heavy + WASM crashes under vitest workers),
 // while providing the symbols the plugins actually use.
 import chalk from 'chalk'

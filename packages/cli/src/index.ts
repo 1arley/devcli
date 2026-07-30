@@ -1,5 +1,5 @@
 import { program } from 'commander'
-import { loadPlugins } from '@dev-cli/core'
+import { loadPlugins } from '@devcli/core'
 import { createRegistry } from './registry.js'
 import { showDiscovery } from './discovery.js'
 

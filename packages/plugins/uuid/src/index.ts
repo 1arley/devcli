@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import type { Plugin, PluginFactory } from '@dev-cli/core'
+import type { Plugin, PluginFactory } from '@devcli/core'
 import { randomBytes, randomUUID } from 'node:crypto'
 
 function uuidV4(): string {

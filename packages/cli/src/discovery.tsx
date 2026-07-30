@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useInput, Text, Box, render } from 'ink'
-import type { PluginManifest } from '@dev-cli/core'
+import type { PluginManifest } from '@devcli/core'
 
 export interface DiscoveryAppProps {
   manifests: PluginManifest[]
