@@ -54,24 +54,57 @@ async function run(path: string = '/fake'): Promise<string[]> {
  */
 function setupProject(opts: {
   files?: string[]
+  dirsExist?: string[]
   pkg?: Record<string, unknown>
   topDirs?: string[]
   dirs?: string[] // absolute subdirs reported by readdirSync AND treated as dirs
+  workspacePkgs?: Record<string, Record<string, unknown>>
+  workspaceReaddir?: Record<string, string[]>
+  workspaceContent?: string
 }): void {
   const files = new Set(opts.files ?? [])
+  const existingDirs = new Set(opts.dirsExist ?? [])
+  const workspacePkgFiles = new Set(Object.keys(opts.workspacePkgs ?? {}))
   const topDirs = opts.topDirs ?? []
   const dirNames = new Set(opts.dirs ?? [])
-  vi.mocked(fsMocks.existsSync).mockImplementation((p) => files.has(p))
-  vi.mocked(fsMocks.readFileSync).mockImplementation((p) =>
-    p.endsWith('package.json') ? JSON.stringify(opts.pkg ?? {}) : '',
+  vi.mocked(fsMocks.existsSync).mockImplementation(
+    (p) => files.has(p) || existingDirs.has(p) || workspacePkgFiles.has(p),
   )
-  vi.mocked(fsMocks.readdirSync).mockImplementation((p) => (p === '/fake' ? topDirs : []))
+  vi.mocked(fsMocks.readFileSync).mockImplementation((p) => {
+    if (p.endsWith('package.json')) {
+      if (opts.pkg && p === '/fake/package.json') return JSON.stringify(opts.pkg)
+      if (opts.workspacePkgs) {
+        for (const [key, val] of Object.entries(opts.workspacePkgs)) {
+          if (p === key) return JSON.stringify(val)
+        }
+      }
+      return JSON.stringify(opts.pkg ?? {})
+    }
+    if (p.endsWith('pnpm-workspace.yaml')) return opts.workspaceContent ?? ''
+    return ''
+  })
+  vi.mocked(fsMocks.readdirSync).mockImplementation((p) => {
+    if (p === '/fake') return topDirs
+    if (opts.workspaceReaddir) {
+      for (const [key, val] of Object.entries(opts.workspaceReaddir)) {
+        if (p === key) return val
+      }
+    }
+    return []
+  })
   vi.mocked(fsMocks.statSync).mockImplementation((p) => ({
-    // treat paths matching a tracked dir name as directories; everything else a file
-    isDirectory: () =>
-      [...files].some((f) => f === p)
-        ? false
-        : dirNames.has(p) || topDirs.includes(p.split('/').pop() ?? ''),
+    isDirectory: () => {
+      if (files.has(p)) return false
+      if (existingDirs.has(p)) return true
+      if (dirNames.has(p)) return true
+      if (topDirs.includes(p.split('/').pop() ?? '')) return true
+      if (opts.workspaceReaddir) {
+        for (const entries of Object.values(opts.workspaceReaddir)) {
+          if (entries.includes(p.split('/').pop() ?? '')) return true
+        }
+      }
+      return false
+    },
   }))
 }
 
@@ -118,6 +151,86 @@ describe('detectFramework (via analyze output)', () => {
     setupProject({ files: ['/fake/package.json'], pkg: { dependencies: { lodash: '4' } } })
     const out = await run('/fake')
     expect(out.join('\n')).toContain('Unknown')
+  })
+
+  it('detects Commander.js', async () => {
+    setupProject({
+      files: ['/fake/package.json'],
+      pkg: { dependencies: { commander: '^12.0.0' } },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('Commander.js')
+  })
+
+  it('detects Ink', async () => {
+    setupProject({
+      files: ['/fake/package.json'],
+      pkg: { dependencies: { ink: '^5.0.0', react: '^18.0.0' } },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('Ink')
+  })
+
+  it('detects Yargs', async () => {
+    setupProject({
+      files: ['/fake/package.json'],
+      pkg: { dependencies: { yargs: '^17.0.0' } },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('Yargs')
+  })
+
+  it('detects oclif', async () => {
+    setupProject({
+      files: ['/fake/package.json'],
+      pkg: { dependencies: { oclif: '^4.0.0' } },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('oclif')
+  })
+})
+
+describe('monorepo framework detection', () => {
+  it('detects framework from workspace packages when root has none', async () => {
+    setupProject({
+      files: ['/fake/package.json', '/fake/pnpm-workspace.yaml'],
+      dirsExist: ['/fake/packages', '/fake/packages/plugins'],
+      pkg: { dependencies: { glob: '^13.0.0' } },
+      workspaceContent: "packages:\n  - 'packages/*'\n  - 'packages/plugins/*'\n",
+      topDirs: ['packages', 'packages/plugins'],
+      workspaceReaddir: {
+        '/fake/packages': ['cli', 'core', 'config', 'ui'],
+        '/fake/packages/plugins': ['ai', 'repo'],
+      },
+      workspacePkgs: {
+        '/fake/packages/cli/package.json': {
+          dependencies: { commander: '^12.1.0', ink: '^5.0.1', react: '^18.3.1' },
+        },
+        '/fake/packages/core/package.json': {
+          dependencies: { commander: '^12.1.0' },
+        },
+      },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('Ink')
+  })
+
+  it('detects Express from workspace when root is dev-only', async () => {
+    setupProject({
+      files: ['/fake/package.json', '/fake/pnpm-workspace.yaml'],
+      dirsExist: ['/fake/packages'],
+      pkg: { devDependencies: { vitest: '^2.1.0' } },
+      workspaceContent: "packages:\n  - 'packages/*'\n",
+      topDirs: ['packages'],
+      workspaceReaddir: { '/fake/packages': ['server'] },
+      workspacePkgs: {
+        '/fake/packages/server/package.json': {
+          dependencies: { express: '^4.18.0' },
+        },
+      },
+    })
+    const out = await run('/fake')
+    expect(out.join('\n')).toContain('Express')
   })
 })
 
