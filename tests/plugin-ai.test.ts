@@ -184,6 +184,35 @@ describe('provider path (fetch)', () => {
     const out = await runAi(['TypeError: cannot read prop'])
     expect(out.join('\n')).toContain('TypeError')
   })
+
+  it('uses ai.baseUrl from config for custom provider (Bug 2 regression)', async () => {
+    loadConfigMock.mockResolvedValue({
+      ai: {
+        provider: 'custom',
+        apiKey: 'sk-custom',
+        baseUrl: 'https://my-llm.example.com/v1',
+        model: 'my-model',
+      },
+    })
+    fetchMock.mockResolvedValue({
+      json: async () => ({ choices: [{ message: { content: 'ok' } }] }),
+    })
+    await runAi(['TypeError: x'])
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://my-llm.example.com/v1/chat/completions')
+  })
+
+  it('falls back to provider default baseUrl when no ai.baseUrl set', async () => {
+    loadConfigMock.mockResolvedValue({
+      ai: { provider: 'openai', apiKey: 'sk-test' },
+    })
+    fetchMock.mockResolvedValue({
+      json: async () => ({ choices: [{ message: { content: 'ok' } }] }),
+    })
+    await runAi(['TypeError: x'])
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://api.openai.com/v1/chat/completions')
+  })
 })
 
 describe('ai config subcommand', () => {
