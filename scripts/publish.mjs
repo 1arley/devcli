@@ -26,6 +26,7 @@ writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 try {
   console.log('\nPublishing devcli...');
   console.log('If 2FA enabled, use: npm publish --otp=XXXXXX\n');
+  execSync('npm pkg fix', { cwd: cliDir, stdio: 'inherit' });
   execSync('npm publish --access public', { cwd: cliDir, stdio: 'inherit' });
 } finally {
   copyFileSync(tempPkgBackup, pkgPath);
