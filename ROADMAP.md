@@ -22,10 +22,10 @@
 
 ## v1.1.0
 
-- [ ] `dev ssh` — SSH connection manager
-- [ ] `dev logs` — aggregated log viewer
-- [ ] `dev repo` — deeper analysis (dependency tree, bundle size)
-- [ ] Plugin auto-discovery from npm (`dev plugin add @scope/plugin`)
+- [x] `dev ssh` — SSH connection manager
+- [x] `dev logs` — aggregated log viewer
+- [x] `dev repo` — deeper analysis (dependency tree, bundle size)
+- [x] Plugin auto-discovery from npm (`dev plugin add @scope/plugin`)
 
 ## v1.2.0
 

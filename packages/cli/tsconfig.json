@@ -24,7 +24,13 @@
       "@devcli/plugin-repo": ["../plugins/repo/src"],
       "@devcli/plugin-repo/*": ["../plugins/repo/src/*"],
       "@devcli/plugin-ai": ["../plugins/ai/src"],
-      "@devcli/plugin-ai/*": ["../plugins/ai/src/*"]
+      "@devcli/plugin-ai/*": ["../plugins/ai/src/*"],
+      "@devcli/plugin-ssh": ["../plugins/ssh/src"],
+      "@devcli/plugin-ssh/*": ["../plugins/ssh/src/*"],
+      "@devcli/plugin-logs": ["../plugins/logs/src"],
+      "@devcli/plugin-logs/*": ["../plugins/logs/src/*"],
+      "@devcli/plugin-plugin": ["../plugins/plugin/src"],
+      "@devcli/plugin-plugin/*": ["../plugins/plugin/src/*"]
     },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]

@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
-import { infoBox, banner } from '@devcli/ui'
+import { infoBox, banner, createTable, symbols } from '@devcli/ui'
 import chalk from 'chalk'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -270,6 +270,84 @@ function analyze(cwd: string = process.cwd()): RepoAnalysis {
   }
 }
 
+function getDependencyTree(cwd: string): { name: string; deps: Record<string, string> }[] {
+  const rootPkg = readJson(join(cwd, 'package.json'))
+  if (!rootPkg) return []
+
+  const entries: { name: string; deps: Record<string, string> }[] = []
+  const rootName = (rootPkg['name'] as string) ?? 'root'
+  const rootDeps = (rootPkg['dependencies'] as Record<string, string>) ?? {}
+  entries.push({ name: rootName, deps: rootDeps })
+
+  for (const wp of collectWorkspacePackages(cwd)) {
+    const name = (wp['name'] as string) ?? 'unknown'
+    const deps = (wp['dependencies'] as Record<string, string>) ?? {}
+    entries.push({ name, deps })
+  }
+  return entries
+}
+
+function printDepTree(
+  entries: { name: string; deps: Record<string, string> }[],
+  indent: string = '',
+): void {
+  for (const entry of entries) {
+    const depCount = Object.keys(entry.deps).length
+    console.log(`${indent}${chalk.cyan(entry.name)} ${chalk.dim(`(${depCount} deps)`)}`)
+    for (const [dep, ver] of Object.entries(entry.deps).slice(0, 20)) {
+      console.log(`${indent}  ${chalk.dim('└─')} ${dep}${chalk.gray(`@${ver}`)}`)
+    }
+    if (Object.keys(entry.deps).length > 20) {
+      console.log(`${indent}  ${chalk.dim(`... and ${Object.keys(entry.deps).length - 20} more`)}`)
+    }
+  }
+}
+
+interface BundleEntry {
+  file: string
+  size: number
+  sizeLabel: string
+}
+
+function analyzeBundle(dir: string): BundleEntry[] {
+  const distDir = join(dir, 'dist')
+  if (!existsSync(distDir)) return []
+
+  const results: BundleEntry[] = []
+
+  function walk(d: string) {
+    const entries = readdirSync(d)
+    for (const entry of entries) {
+      const path = join(d, entry)
+      try {
+        const stat = statSync(path)
+        if (stat.isDirectory()) {
+          walk(path)
+        } else if (entry.endsWith('.js') || entry.endsWith('.mjs') || entry.endsWith('.cjs')) {
+          const sizeKB = stat.size / 1024
+          const label =
+            sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB.toFixed(1)} KB`
+          results.push({
+            file: path.replace(distDir, '').replace(/^\//, ''),
+            size: stat.size,
+            sizeLabel: label,
+          })
+        }
+      } catch {
+        /* skip */
+      }
+    }
+  }
+
+  try {
+    walk(distDir)
+  } catch {
+    /* skip */
+  }
+  results.sort((a, b) => b.size - a.size)
+  return results
+}
+
 const manifest = {
   name: 'repo',
   description: 'Analyze a project: framework, language, dependencies, architecture',
@@ -282,27 +360,72 @@ export const createRepoPlugin: PluginFactory = (): Plugin => {
   return {
     manifest,
     register(program: Command) {
-      program
-        .command('repo')
-        .description(manifest.description)
-        .argument('[path]', 'Project path', process.cwd())
-        .action((path: string) => {
-          const result = analyze(path)
-          console.log(banner('Repo Analysis', path))
-          console.log(
-            infoBox(
-              'Overview',
-              [
-                `${chalk.bold('Framework'.padEnd(18))} ${result.framework}`,
-                `${chalk.bold('Language'.padEnd(18))} ${result.language}`,
-                `${chalk.bold('Package Manager'.padEnd(18))} ${result.packageManager}`,
-                `${chalk.bold('Architecture'.padEnd(18))} ${result.architecture}`,
-                `${chalk.bold('Dependencies'.padEnd(18))} ${result.dependencies}`,
-                `${chalk.bold('Dev Dependencies'.padEnd(18))} ${result.devDependencies}`,
-                `${chalk.bold('Source Files'.padEnd(18))} ${result.files}`,
-              ].join('\n'),
-            ),
+      const repo = program.command('repo').description(manifest.description)
+
+      repo.argument('[path]', 'Project path', process.cwd()).action((path: string) => {
+        const result = analyze(path)
+        console.log(banner('Repo Analysis', path))
+        console.log(
+          infoBox(
+            'Overview',
+            [
+              `${chalk.bold('Framework'.padEnd(18))} ${result.framework}`,
+              `${chalk.bold('Language'.padEnd(18))} ${result.language}`,
+              `${chalk.bold('Package Manager'.padEnd(18))} ${result.packageManager}`,
+              `${chalk.bold('Architecture'.padEnd(18))} ${result.architecture}`,
+              `${chalk.bold('Dependencies'.padEnd(18))} ${result.dependencies}`,
+              `${chalk.bold('Dev Dependencies'.padEnd(18))} ${result.devDependencies}`,
+              `${chalk.bold('Source Files'.padEnd(18))} ${result.files}`,
+            ].join('\n'),
+          ),
+        )
+      })
+
+      repo
+        .command('deps [path]')
+        .description('Show dependency tree for the project')
+        .action((path: string = process.cwd()) => {
+          const tree = getDependencyTree(path)
+          if (tree.length === 0) {
+            console.log(`${symbols.error} No package.json found at ${path}`)
+            return
+          }
+          console.log(banner('Dependency Tree', path))
+          printDepTree(tree)
+        })
+
+      repo
+        .command('bundle [path]')
+        .description('Analyze bundle size (dist/ directory)')
+        .action((path: string = process.cwd()) => {
+          const bundles = analyzeBundle(path)
+          if (bundles.length === 0) {
+            console.log(`${symbols.info} No dist/ directory found at ${path}`)
+            return
+          }
+          console.log(banner('Bundle Analysis', path))
+          const table = createTable(
+            ['File', 'Size'],
+            bundles.slice(0, 30).map((b) => ({
+              File: b.file,
+              Size:
+                b.size > 1024 * 1024
+                  ? chalk.red(b.sizeLabel)
+                  : b.size > 100 * 1024
+                    ? chalk.yellow(b.sizeLabel)
+                    : chalk.green(b.sizeLabel),
+            })),
           )
+          console.log(table.toString())
+          const totalSize = bundles.reduce((sum, b) => sum + b.size, 0)
+          const totalLabel =
+            totalSize > 1024 * 1024
+              ? `${(totalSize / (1024 * 1024)).toFixed(2)} MB`
+              : `${(totalSize / 1024).toFixed(1)} KB`
+          console.log(`\n${chalk.bold('Total:')} ${totalLabel} (${bundles.length} files)`)
+          if (bundles.length > 30) {
+            console.log(chalk.dim(`... and ${bundles.length - 30} more files`))
+          }
         })
     },
   }
