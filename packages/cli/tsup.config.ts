@@ -25,6 +25,10 @@ export default defineConfig({
     '@devcli/plugin-ssh',
     '@devcli/plugin-logs',
     '@devcli/plugin-plugin',
+    '@devcli/plugin-standup',
+    '@devcli/plugin-context',
+    '@devcli/plugin-clean',
+    '@devcli/plugin-completion',
   ],
   external: ['react', 'ink', 'commander'],
   banner: {

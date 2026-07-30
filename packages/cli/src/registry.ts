@@ -15,6 +15,10 @@ import { createAiPlugin } from '@devcli/plugin-ai'
 import { createSshPlugin } from '@devcli/plugin-ssh'
 import { createLogsPlugin } from '@devcli/plugin-logs'
 import { createPluginPluginFactory } from '@devcli/plugin-plugin'
+import { createStandupPlugin } from '@devcli/plugin-standup'
+import { createContextPlugin } from '@devcli/plugin-context'
+import { createCleanPlugin } from '@devcli/plugin-clean'
+import { createCompletionPlugin } from '@devcli/plugin-completion'
 
 export function createRegistry(): PluginRegistry {
   const registry = new PluginRegistry()
@@ -32,6 +36,10 @@ export function createRegistry(): PluginRegistry {
     ['ai', createAiPlugin],
     ['ssh', createSshPlugin],
     ['logs', createLogsPlugin],
+    ['standup', createStandupPlugin],
+    ['context', createContextPlugin],
+    ['clean', createCleanPlugin],
+    ['completion', createCompletionPlugin],
   ]
   for (const [name, factory] of plugins) {
     registry.register(name, factory)

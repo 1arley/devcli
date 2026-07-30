@@ -49,8 +49,9 @@ describe('DevCliConfigSchema', () => {
     expect(() => DevCliConfigSchema.parse({ defaults: { theme: 'purple' } })).toThrow()
   })
 
-  it('rejects invalid ai provider', () => {
-    expect(() => DevCliConfigSchema.parse({ ai: { provider: 'gemini' } })).toThrow()
+  it('accepts any ai provider string (including custom)', () => {
+    const cfg = DevCliConfigSchema.parse({ ai: { provider: 'custom-provider' } })
+    expect(cfg.ai?.provider).toBe('custom-provider')
   })
 
   it('rejects non-number version', () => {

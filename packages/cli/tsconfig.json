@@ -30,7 +30,15 @@
       "@devcli/plugin-logs": ["../plugins/logs/src"],
       "@devcli/plugin-logs/*": ["../plugins/logs/src/*"],
       "@devcli/plugin-plugin": ["../plugins/plugin/src"],
-      "@devcli/plugin-plugin/*": ["../plugins/plugin/src/*"]
+      "@devcli/plugin-plugin/*": ["../plugins/plugin/src/*"],
+      "@devcli/plugin-standup": ["../plugins/standup/src"],
+      "@devcli/plugin-standup/*": ["../plugins/standup/src/*"],
+      "@devcli/plugin-context": ["../plugins/context/src"],
+      "@devcli/plugin-context/*": ["../plugins/context/src/*"],
+      "@devcli/plugin-clean": ["../plugins/clean/src"],
+      "@devcli/plugin-clean/*": ["../plugins/clean/src/*"],
+      "@devcli/plugin-completion": ["../plugins/completion/src"],
+      "@devcli/plugin-completion/*": ["../plugins/completion/src/*"]
     },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]

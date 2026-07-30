@@ -1,20 +1,20 @@
 import { z } from 'zod'
 
 export const DevCliConfigSchema = z.object({
-  version: z.number().default(1).readonly(),
+  version: z.number().default(1),
   defaults: z
     .object({
       editor: z.string().default('code'),
       shell: z.string().default('bash'),
       theme: z.enum(['default', 'dark', 'light']).default('default'),
     })
-    .default({})
-    .readonly(),
+    .default({}),
   ai: z
     .object({
-      provider: z.enum(['openai', 'anthropic', 'ollama']).optional(),
+      provider: z.string().optional(),
       apiKey: z.string().optional(),
       model: z.string().optional(),
+      baseUrl: z.string().optional(),
     })
     .optional(),
   docker: z
@@ -24,7 +24,7 @@ export const DevCliConfigSchema = z.object({
     .optional(),
   ports: z
     .object({
-      ignore: z.array(z.number()).default([]).readonly(),
+      ignore: z.array(z.number()).default([]),
     })
     .optional(),
 })
