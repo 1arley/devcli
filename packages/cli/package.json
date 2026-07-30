@@ -1,6 +1,6 @@
 {
   "name": "devcli",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Dev CLI — the Raycast of the Terminal for Developers",
   "type": "module",
   "license": "MIT",
@@ -8,8 +8,7 @@
   "homepage": "https://github.com/1arley/devcli",
   "repository": {
     "type": "git",
-    "url": "https://github.com/1arley/devcli.git",
-    "directory": "packages/cli"
+    "url": "https://github.com/1arley/devcli.git"
   },
   "bugs": {
     "url": "https://github.com/1arley/devcli/issues"
@@ -18,13 +17,7 @@
     "cli",
     "developer-tools",
     "terminal",
-    "devtools",
-    "docker",
-    "git",
-    "jwt",
-    "uuid",
-    "qrcode",
-    "raycast"
+    "devtools"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -32,7 +25,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "dev": "./dist/index.js"
+    "dev": "dev.js"
   },
   "exports": {
     ".": {

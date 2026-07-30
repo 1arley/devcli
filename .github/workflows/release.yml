@@ -42,9 +42,11 @@ jobs:
         run: pnpm test:run
 
       - name: Publish to npm
-        run: pnpm --filter 'devcli' publish --no-git-checks --access public
+        run: node scripts/publish.mjs
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm_config_registry: https://registry.npmjs.org
+          npm_config_//registry.npmjs.org/:_authToken: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
