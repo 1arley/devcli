@@ -1,6 +1,31 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@devcli/plugin-doctor": ["../plugins/doctor/src"],
+      "@devcli/plugin-doctor/*": ["../plugins/doctor/src/*"],
+      "@devcli/plugin-ports": ["../plugins/ports/src"],
+      "@devcli/plugin-ports/*": ["../plugins/ports/src/*"],
+      "@devcli/plugin-docker": ["../plugins/docker/src"],
+      "@devcli/plugin-docker/*": ["../plugins/docker/src/*"],
+      "@devcli/plugin-git": ["../plugins/git/src"],
+      "@devcli/plugin-git/*": ["../plugins/git/src/*"],
+      "@devcli/plugin-jwt": ["../plugins/jwt/src"],
+      "@devcli/plugin-jwt/*": ["../plugins/jwt/src/*"],
+      "@devcli/plugin-json": ["../plugins/json/src"],
+      "@devcli/plugin-json/*": ["../plugins/json/src/*"],
+      "@devcli/plugin-uuid": ["../plugins/uuid/src"],
+      "@devcli/plugin-uuid/*": ["../plugins/uuid/src/*"],
+      "@devcli/plugin-qr": ["../plugins/qr/src"],
+      "@devcli/plugin-qr/*": ["../plugins/qr/src/*"],
+      "@devcli/plugin-env": ["../plugins/env/src"],
+      "@devcli/plugin-env/*": ["../plugins/env/src/*"],
+      "@devcli/plugin-repo": ["../plugins/repo/src"],
+      "@devcli/plugin-repo/*": ["../plugins/repo/src/*"],
+      "@devcli/plugin-ai": ["../plugins/ai/src"],
+      "@devcli/plugin-ai/*": ["../plugins/ai/src/*"]
+    },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]
   },
