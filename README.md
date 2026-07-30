@@ -24,13 +24,13 @@ dev
 
 ```bash
 # npm
-npm install -g devcli
+npm install -g @1arley/devcli
 
 # pnpm
-pnpm add -g devcli
+pnpm add -g @1arley/devcli
 
 # yarn
-yarn global add devcli
+yarn global add @1arley/devcli
 ```
 
 Requires Node.js 18+.
