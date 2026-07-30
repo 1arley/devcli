@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build base packages
+        run: pnpm --filter @devcli/config --filter @devcli/ui --filter @devcli/core run build
+
       - name: Lint
         run: pnpm lint
 

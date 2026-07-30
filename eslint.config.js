@@ -18,6 +18,7 @@ export default tseslint.config(
       '**/.next/**',
       '**/out/**',
       '**/.vercel/**',
+      'apps/**',
     ],
   },
   js.configs.recommended,
