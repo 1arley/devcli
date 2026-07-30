@@ -41,16 +41,12 @@ jobs:
       - name: Run tests
         run: pnpm test:run
 
-      - name: Auto-bump patch version
+      - name: Auto-bump patch version (working copy only)
         id: bump
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
           VERSION=$(jq -r '.version | split(".") | .[2] |= (tonumber + 1 | tostring) | join(".")' packages/cli/package.json)
           jq ".version = \"$VERSION\"" packages/cli/package.json > /tmp/pkg.json
           mv /tmp/pkg.json packages/cli/package.json
-          git add packages/cli/package.json
-          git commit -m "chore: bump to v$VERSION [skip ci]"
           echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Publish to npm
