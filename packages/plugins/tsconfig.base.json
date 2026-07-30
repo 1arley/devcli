@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@devcli/core": ["../core/src"],
+      "@devcli/core/*": ["../core/src/*"],
+      "@devcli/ui": ["../ui/src"],
+      "@devcli/ui/*": ["../ui/src/*"],
+      "@devcli/config": ["../config/src"],
+      "@devcli/config/*": ["../config/src/*"]
+    }
+  }
+}
