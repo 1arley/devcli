@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  transpilePackages: ['next-mdx-remote'],
 }
 
 export default nextConfig
