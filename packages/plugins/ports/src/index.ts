@@ -63,21 +63,37 @@ function parseWindowsPorts(): PortInfo[] {
   return ports
 }
 
-function killPort(port: string): boolean {
+type KillResult = 'killed' | 'free' | 'error'
+
+function killPort(port: string): KillResult {
+  const isWin = process.platform === 'win32'
+
+  let pid = ''
   try {
-    const isWin = process.platform === 'win32'
     if (isWin) {
       const out = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' })
         .trim()
         .split('\n')[0]
-      const pid = out?.split(/\s+/).pop() ?? ''
+      pid = out?.split(/\s+/).pop() ?? ''
+    } else {
+      pid = execSync(`lsof -ti:${port}`, { encoding: 'utf-8', stdio: 'pipe' }).trim()
+    }
+  } catch {
+    // lsof / findstr exit non-zero when nothing found -> port is free
+    return 'free'
+  }
+
+  if (!pid) return 'free'
+
+  try {
+    if (isWin) {
       execSync(`taskkill /PID ${pid} /F`, { stdio: 'pipe' })
     } else {
-      execSync(`lsof -ti:${port} | xargs kill -9`, { stdio: 'pipe' })
+      execSync(`kill -9 ${pid}`, { stdio: 'pipe' })
     }
-    return true
+    return 'killed'
   } catch {
-    return false
+    return 'error'
   }
 }
 
@@ -113,8 +129,10 @@ export const createPortsPlugin: PluginFactory = (): Plugin => {
         .description('Kill the process listening on a port')
         .action((port: string) => {
           const result = killPort(port)
-          if (result) {
+          if (result === 'killed') {
             console.log(`${symbols.success} Killed process on port ${chalk.bold(port)}`)
+          } else if (result === 'free') {
+            console.log(`${symbols.info} Port ${chalk.bold(port)} is already free`)
           } else {
             console.log(`${symbols.error} Could not kill process on port ${port}`)
           }

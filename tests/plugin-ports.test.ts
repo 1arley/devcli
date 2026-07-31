@@ -123,21 +123,40 @@ describe('parseUnixPorts', () => {
 })
 
 describe('killPort (unix)', () => {
-  it('kill success returns true', async () => {
+  it('kill success kills process', async () => {
     setLinux()
     execMock.mockReturnValue('1234')
     const out = await run('kill', ['3000'])
     expect(execMock).toHaveBeenCalledWith(
-      'lsof -ti:3000 | xargs kill -9',
+      'lsof -ti:3000',
+      expect.objectContaining({ encoding: 'utf-8' }),
+    )
+    expect(execMock).toHaveBeenCalledWith(
+      'kill -9 1234',
       expect.objectContaining({ stdio: 'pipe' }),
     )
     expect(out.join('\n')).toMatch(/Killed process on port 3000/)
   })
 
-  it('kill failure returns false', async () => {
+  it('kill on free port reports already free', async () => {
     setLinux()
-    execMock.mockImplementation(() => {
-      throw new Error('fail')
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('lsof')) throw new Error('not found')
+      return ''
+    })
+    const out = await run('kill', ['9999'])
+    expect(execMock).toHaveBeenCalledWith(
+      'lsof -ti:9999',
+      expect.objectContaining({ encoding: 'utf-8', stdio: 'pipe' }),
+    )
+    expect(out.join('\n')).toMatch(/already free/)
+  })
+
+  it('kill failure reports could not kill', async () => {
+    setLinux()
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('lsof')) return '1234'
+      throw new Error('kill fail')
     })
     const out = await run('kill', ['3000'])
     expect(out.join('\n')).toMatch(/Could not kill process on port 3000/)
