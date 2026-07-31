@@ -8,7 +8,7 @@ interface StatsProps {
 export function Stats({ dict }: StatsProps) {
   const stats = [
     { icon: Download, label: dict.cta.plugins, value: '11' },
-    { icon: Star, label: dict.cta.tests, value: '159' },
+    { icon: Star, label: dict.cta.tests, value: '159+' },
     { icon: GitFork, label: dict.cta.license, value: 'MIT' },
     { icon: Users, label: dict.hero.openSource, value: '100%' },
   ]
