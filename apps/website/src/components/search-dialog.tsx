@@ -40,10 +40,15 @@ export function SearchDialog({ locale: _locale }: { locale: string }) {
 
   useEffect(() => {
     const initPagefind = async () => {
-      if (typeof window !== 'undefined') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pf = await import('/pagefind/pagefind.js' as any)
-        setPagefind(pf)
+      try {
+        const pf = await import(
+          /* webpackIgnore: true */
+          // @ts-expect-error pagefind is injected at deploy time
+          '/pagefind/pagefind.js'
+        )
+        setPagefind(pf as PagefindClient)
+      } catch {
+        // pagefind not available — search silently disabled
       }
     }
     initPagefind()
