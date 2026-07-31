@@ -67,3 +67,6 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+      - name: Deploy website to Vercel
+        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
