@@ -1,14 +1,17 @@
 import { MetadataRoute } from 'next'
+import { locales } from '@/lib/i18n/config'
+import { SITE_URL } from '@/lib/urls'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://devcli.dev'
-
   const staticPages = [
     '',
     '/docs',
     '/docs/getting-started',
     '/docs/configuration',
     '/docs/architecture',
+    '/docs/plugins',
+    '/docs/commands',
+    '/docs/contributing',
     '/commands',
     '/plugins',
     '/roadmap',
@@ -32,18 +35,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'ai',
   ]
 
-  return [
-    ...staticPages.map((path) => ({
-      url: `${baseUrl}${path}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: path === '' ? 1 : 0.8,
-    })),
-    ...commands.map((cmd) => ({
-      url: `${baseUrl}/commands/${cmd}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    })),
+  const allPaths = [
+    ...staticPages.map((path) => ({ path, priority: path === '' ? 1 : 0.8 })),
+    ...commands.map((cmd) => ({ path: `/commands/${cmd}`, priority: 0.7 })),
   ]
+
+  return locales.flatMap((locale) =>
+    allPaths.map(({ path, priority }) => ({
+      url: `${SITE_URL}/${locale}${path}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority,
+    })),
+  )
 }
