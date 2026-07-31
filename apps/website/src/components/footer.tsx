@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Terminal } from 'lucide-react'
+import { GITHUB_REPO_URL, GITHUB_LICENSE_URL, NPM_PACKAGE_URL } from '@/lib/urls'
 
 const footerLinks = {
   Product: [
@@ -15,9 +16,9 @@ const footerLinks = {
     { href: '/contributing', label: 'Contributing' },
   ],
   Legal: [
-    { href: 'https://github.com', label: 'GitHub' },
-    { href: 'https://npmjs.com/package/@1arley/devcli', label: 'npm' },
-    { href: '/license', label: 'License' },
+    { href: GITHUB_REPO_URL, label: 'GitHub' },
+    { href: NPM_PACKAGE_URL, label: 'npm' },
+    { href: GITHUB_LICENSE_URL, label: 'License' },
   ],
 }
 
