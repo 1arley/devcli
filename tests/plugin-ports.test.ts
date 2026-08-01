@@ -161,6 +161,17 @@ describe('killPort (unix)', () => {
     const out = await run('kill', ['3000'])
     expect(out.join('\n')).toMatch(/Could not kill process on port 3000/)
   })
+
+  it('kill handles multiple PIDs on same port', async () => {
+    setLinux()
+    execMock.mockReturnValue('11819\n11962')
+    const out = await run('kill', ['13469'])
+    expect(execMock).toHaveBeenCalledWith(
+      'kill -9 11819 11962',
+      expect.objectContaining({ stdio: 'pipe' }),
+    )
+    expect(out.join('\n')).toMatch(/Killed process on port 13469/)
+  })
 })
 
 describe('parseWindowsPorts', () => {
@@ -192,6 +203,25 @@ describe('parseWindowsPorts', () => {
     const out = await run('kill', ['3000'])
     expect(execMock).toHaveBeenCalledWith(
       'taskkill /PID 4321 /F',
+      expect.objectContaining({ stdio: 'pipe' }),
+    )
+    expect(out.join('\n')).toMatch(/Killed/)
+  })
+
+  it('windows kill handles multiple PIDs', async () => {
+    setWin()
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('netstat'))
+        return '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321\n  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 5555'
+      return ''
+    })
+    const out = await run('kill', ['3000'])
+    expect(execMock).toHaveBeenCalledWith(
+      'taskkill /PID 4321 /F',
+      expect.objectContaining({ stdio: 'pipe' }),
+    )
+    expect(execMock).toHaveBeenCalledWith(
+      'taskkill /PID 5555 /F',
       expect.objectContaining({ stdio: 'pipe' }),
     )
     expect(out.join('\n')).toMatch(/Killed/)

@@ -71,12 +71,19 @@ function killPort(port: string): KillResult {
   let pid = ''
   try {
     if (isWin) {
-      const out = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' })
+      const lines = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' })
         .trim()
-        .split('\n')[0]
-      pid = out?.split(/\s+/).pop() ?? ''
+        .split('\n')
+        .filter(Boolean)
+      const pids = new Set<string>()
+      for (const line of lines) {
+        const p = line.split(/\s+/).pop() ?? ''
+        if (p) pids.add(p)
+      }
+      pid = [...pids].join(' ')
     } else {
-      pid = execSync(`lsof -ti:${port}`, { encoding: 'utf-8', stdio: 'pipe' }).trim()
+      const out = execSync(`lsof -ti:${port}`, { encoding: 'utf-8', stdio: 'pipe' }).trim()
+      pid = out.split('\n').filter(Boolean).join(' ')
     }
   } catch {
     // lsof / findstr exit non-zero when nothing found -> port is free
@@ -87,7 +94,9 @@ function killPort(port: string): KillResult {
 
   try {
     if (isWin) {
-      execSync(`taskkill /PID ${pid} /F`, { stdio: 'pipe' })
+      for (const singlePid of pid.split(/\s+/).filter(Boolean)) {
+        execSync(`taskkill /PID ${singlePid} /F`, { stdio: 'pipe' })
+      }
     } else {
       execSync(`kill -9 ${pid}`, { stdio: 'pipe' })
     }
