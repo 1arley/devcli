@@ -1,58 +1,77 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { tryExec, isSafeIdentifier } from '@devcli/core'
 import { symbols, banner } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-function tryExec(cmd: string): string | null {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return null
-  }
+function safeLines(lines: unknown, fallback = 50): number {
+  const n = typeof lines === 'number' ? lines : parseInt(String(lines), 10)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(n, 10000)
+}
+
+function safeContainer(name: string): string | null {
+  return isSafeIdentifier(name) ? name : null
 }
 
 function getSystemLogs(lines: number = 50): string | null {
-  const journalctl = tryExec(`journalctl -n ${lines} --no-pager 2>/dev/null`)
+  const n = safeLines(lines)
+  const journalctl = tryExec('journalctl', ['-n', String(n), '--no-pager'])
   if (journalctl) return journalctl
   return (
-    tryExec(`tail -n ${lines} /var/log/syslog 2>/dev/null`) ??
-    tryExec(`tail -n ${lines} /var/log/messages 2>/dev/null`)
+    tryExec('tail', ['-n', String(n), '/var/log/syslog']) ??
+    tryExec('tail', ['-n', String(n), '/var/log/messages'])
   )
 }
 
-function getDockerLogs(container?: string, lines: number = 50): string | null {
-  if (container) return tryExec(`docker logs --tail ${lines} ${container} 2>/dev/null`)
-  const containers = tryExec(`docker ps --format '{{.Names}}' 2>/dev/null`)
+function getDockerLogs(container: string | undefined, lines: number = 50): string | null {
+  const n = safeLines(lines)
+  if (container) {
+    const safe = safeContainer(container)
+    if (!safe) {
+      console.log(chalk.red(`Invalid container name: ${container}`))
+      return null
+    }
+    return tryExec('docker', ['logs', '--tail', String(n), safe])
+  }
+  const containers = tryExec('docker', ['ps', '--format', '{{.Names}}'])
   if (!containers) return null
   const names = containers.split('\n').filter(Boolean)
   if (names.length === 0) return null
   const output: string[] = []
   for (const name of names.slice(0, 5)) {
-    const logs = tryExec(
-      `docker logs --tail ${Math.floor(lines / names.length)} ${name} 2>/dev/null`,
-    )
+    const logs = tryExec('docker', ['logs', '--tail', String(Math.floor(n / names.length)), name])
     if (logs) output.push(chalk.bold(`--- ${name} ---`), logs)
   }
   return output.join('\n') || null
 }
 
 function getPm2Logs(lines: number = 50): string | null {
+  const n = safeLines(lines)
   const logDir = join(homedir(), '.pm2', 'logs')
   if (!existsSync(logDir)) return null
-  const files = execSync(`ls -t ${logDir}/*.log 2>/dev/null`, { encoding: 'utf-8' })
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .slice(0, 3)
+  let files: string[] = []
+  try {
+    files = readdirSync(logDir)
+      .filter((f) => f.endsWith('.log'))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, 3)
+      .map((f) => join(logDir, f))
+  } catch {
+    return null
+  }
   if (files.length === 0) return null
   const output: string[] = []
   for (const file of files) {
-    const content = readFileSync(file, 'utf-8').split('\n').slice(-lines).join('\n')
-    output.push(chalk.bold(`--- ${file.split('/').pop()} ---`), content)
+    try {
+      const content = readFileSync(file, 'utf-8').split('\n').slice(-n).join('\n')
+      output.push(chalk.bold(`--- ${file.split('/').pop()} ---`), content)
+    } catch {
+      continue
+    }
   }
   return output.join('\n')
 }

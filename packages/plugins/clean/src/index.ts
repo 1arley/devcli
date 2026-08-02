@@ -3,6 +3,7 @@ import type { Plugin, PluginFactory } from '@devcli/core'
 import { createTable, symbols, withSpinner } from '@devcli/ui'
 import chalk from 'chalk'
 import { readdirSync, statSync, rmSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { join } from 'node:path'
 
 interface DirInfo {
@@ -61,23 +62,14 @@ function dirSize(dir: string): number {
 }
 
 function dirSizeQuick(dir: string): number {
-  let size = 0
-  let count = 0
   try {
-    const entries = readdirSync(dir)
-    count = entries.length
-    for (const entry of entries.slice(0, 200)) {
-      const path = join(dir, entry)
-      try {
-        size += statSync(path).size
-      } catch {
-        /* skip */
-      }
-    }
+    const out = execSync(`du -sb "${dir}" 2>/dev/null`, { encoding: 'utf-8' }).trim()
+    const size = parseInt(out.split(/\s+/)[0] ?? '0', 10)
+    if (size > 0) return size
   } catch {
-    /* skip */
+    /* fall through to recursive walk */
   }
-  return size * Math.max(1, count / 200)
+  return dirSize(dir)
 }
 
 function findTargets(root: string): DirInfo[] {

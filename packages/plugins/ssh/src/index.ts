@@ -1,5 +1,6 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { isSafeIdentifier } from '@devcli/core'
 import { createTable, symbols } from '@devcli/ui'
 import chalk from 'chalk'
 import { execSync } from 'node:child_process'
@@ -104,6 +105,10 @@ export const createSshPlugin: PluginFactory = (): Plugin => {
         .option('-p, --port <port>', 'Port number')
         .option('-l, --user <user>', 'Username')
         .action((host: string, options: { port?: string; user?: string }) => {
+          if (!isSafeIdentifier(host)) {
+            console.log(`${symbols.error} Invalid host name: ${host}`)
+            return
+          }
           const entries = parseSshConfig()
           const entry = entries.find(
             (e) => e.host === host || e.hostName === host || e.host === `*`,
@@ -128,6 +133,10 @@ export const createSshPlugin: PluginFactory = (): Plugin => {
         .option('-p, --port <port>', 'Port number')
         .option('-i, --identity <file>', 'Identity file path')
         .action((host: string, options: { user?: string; port?: string; identity?: string }) => {
+          if (!isSafeIdentifier(host)) {
+            console.log(`${symbols.error} Invalid host name: ${host}`)
+            return
+          }
           if (!existsSync(SSH_DIR)) mkdirSync(SSH_DIR, { recursive: true })
           const lines: string[] = ['', `Host ${host}`, `  HostName ${host}`]
           if (options.user) lines.push(`  User ${options.user}`)

@@ -83,7 +83,6 @@ function collectWorkspacePackages(cwd: string): Record<string, unknown>[] {
       if (Array.isArray(workspaces)) patterns.push(...workspaces)
       else if (workspaces.packages) patterns.push(...workspaces.packages)
     }
-    break
   }
 
   if (patterns.length === 0) return []
@@ -216,9 +215,10 @@ function detectArchitecture(cwd: string): string {
   return 'flat'
 }
 
-function countFiles(dir: string, ext: string[]): number {
+function countFiles(dir: string, ext: string[], depth: number = 0): number {
   let count = 0
-  function walk(d: string) {
+  function walk(d: string, dep: number) {
+    if (dep > 20) return
     const entries = readdirSync(d)
     for (const entry of entries) {
       const path = join(d, entry)
@@ -226,7 +226,7 @@ function countFiles(dir: string, ext: string[]): number {
       try {
         const stat = statSync(path)
         if (stat.isDirectory()) {
-          walk(path)
+          walk(path, dep + 1)
         } else if (ext.some((e) => entry.endsWith(e))) {
           count++
         }
@@ -236,7 +236,7 @@ function countFiles(dir: string, ext: string[]): number {
     }
   }
   try {
-    walk(dir)
+    walk(dir, depth)
   } catch {
     /* ignore */
   }
@@ -266,7 +266,7 @@ function analyze(cwd: string = process.cwd()): RepoAnalysis {
     dependencies: Object.keys(allDeps).length,
     devDependencies: Object.keys(allDevDeps).length,
     architecture: detectArchitecture(cwd),
-    files: countFiles(cwd, ['.ts', '.tsx', '.js', '.jsx', '.json']),
+    files: countFiles(cwd, ['.ts', '.tsx', '.js', '.jsx', '.json'], 0),
   }
 }
 

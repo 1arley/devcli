@@ -1,21 +1,20 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { exec } from '@devcli/core'
 import { createTable, symbols, withSpinner } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
 
-function runDocker(args: string): string {
-  try {
-    return execSync(`docker ${args}`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
-  } catch {
-    return ''
-  }
+function runDocker(args: string[]): string {
+  return exec('docker', args, { maxBuffer: 10 * 1024 * 1024 })
 }
 
 function parseContainerTable(): Record<string, string>[] {
-  const output = runDocker(
-    'ps -a --format "{{.ID}}\t{{.Image}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"',
-  )
+  const output = runDocker([
+    'ps',
+    '-a',
+    '--format',
+    '{{.ID}}\t{{.Image}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}',
+  ])
   if (!output.trim()) return []
   const rows = output.trim().split('\n')
   return rows.map((line) => {
@@ -31,7 +30,7 @@ function parseContainerTable(): Record<string, string>[] {
 }
 
 function parseImages(): Record<string, string>[] {
-  const output = runDocker('images --format "{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.ID}}"')
+  const output = runDocker(['images', '--format', '{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.ID}}'])
   if (!output.trim()) return []
   const rows = output.trim().split('\n')
   return rows.map((line) => {
@@ -46,7 +45,7 @@ function parseImages(): Record<string, string>[] {
 }
 
 function parseVolumes(): Record<string, string>[] {
-  const output = runDocker('volume ls --format "{{.Driver}}\t{{.Name}}"')
+  const output = runDocker(['volume', 'ls', '--format', '{{.Driver}}\t{{.Name}}'])
   if (!output.trim()) return []
   const rows = output.trim().split('\n')
   return rows.map((line) => {
@@ -56,7 +55,7 @@ function parseVolumes(): Record<string, string>[] {
 }
 
 function parseNetworks(): Record<string, string>[] {
-  const output = runDocker('network ls --format "{{.ID}}\t{{.Name}}\t{{.Driver}}"')
+  const output = runDocker(['network', 'ls', '--format', '{{.ID}}\t{{.Name}}\t{{.Driver}}'])
   if (!output.trim()) return []
   const rows = output.trim().split('\n')
   return rows.map((line) => {
@@ -67,10 +66,6 @@ function parseNetworks(): Record<string, string>[] {
       Driver: Driver ?? '',
     }
   })
-}
-
-function systemDiskUsage(): string {
-  return runDocker('system df')
 }
 
 const manifest = {
@@ -164,7 +159,7 @@ export const createDockerPlugin: PluginFactory = (): Plugin => {
         .command('disk')
         .description('Show Docker disk usage (wasted space)')
         .action(() => {
-          const usage = systemDiskUsage()
+          const usage = runDocker(['system', 'df'])
           if (!usage.trim()) {
             console.log(`${symbols.error} Could not get disk usage`)
             return
@@ -180,9 +175,10 @@ export const createDockerPlugin: PluginFactory = (): Plugin => {
           if (!options.force) {
             console.log(chalk.yellow('Use --force to skip confirmation'))
             console.log('This will remove all stopped containers, unused networks, dangling images')
+            console.log(chalk.dim('Preview with: docker system df'))
             return
           }
-          const output = runDocker('system prune -af')
+          const output = runDocker(['system', 'prune', '-af'])
           console.log(output)
         })
     },

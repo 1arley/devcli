@@ -35,7 +35,7 @@ function parseUnixPorts(): PortInfo[] {
     const pid = parts[1] ?? ''
     const addr = parts[8] ?? ''
     const port = addr.split(':').pop() ?? ''
-    if (port) ports.push({ port, pid, process })
+    if (port && /^\d+$/.test(pid)) ports.push({ port, pid, process })
   }
 
   return ports
@@ -45,6 +45,7 @@ function parseWindowsPorts(): PortInfo[] {
   const output = execSync('netstat -ano | findstr LISTENING', { encoding: 'utf-8' })
   const lines = output.trim().split('\n')
   const ports: PortInfo[] = []
+  const seen = new Set<string>()
 
   for (const line of lines) {
     const parts = line.trim().split(/\s+/)
@@ -52,12 +53,17 @@ function parseWindowsPorts(): PortInfo[] {
     const addr = parts[1] ?? ''
     const port = addr.split(':').pop() ?? ''
     const pid = parts[4] ?? ''
-    const process =
-      execSync(`tasklist /fi "PID eq ${pid}" /nh /fo csv`, { encoding: 'utf-8' })
-        .trim()
-        .replace(/"/g, '')
-        .split(',')[0] ?? ''
-    if (port) ports.push({ port, pid, process })
+    if (!port || !pid || !/^\d+$/.test(pid)) continue
+    if (seen.has(pid)) continue
+    seen.add(pid)
+    let process = ''
+    try {
+      const out = execSync(`tasklist /fi "PID eq ${pid}" /nh /fo csv`, { encoding: 'utf-8' })
+      process = out.trim().replace(/"/g, '').split(',')[0] ?? ''
+    } catch {
+      /* keep empty */
+    }
+    ports.push({ port, pid, process })
   }
 
   return ports
@@ -78,12 +84,15 @@ function killPort(port: string): KillResult {
       const pids = new Set<string>()
       for (const line of lines) {
         const p = line.split(/\s+/).pop() ?? ''
-        if (p) pids.add(p)
+        if (p && /^\d+$/.test(p)) pids.add(p)
       }
       pid = [...pids].join(' ')
     } else {
       const out = execSync(`lsof -ti:${port}`, { encoding: 'utf-8', stdio: 'pipe' }).trim()
-      pid = out.split('\n').filter(Boolean).join(' ')
+      pid = out
+        .split('\n')
+        .filter((p) => /^\d+$/.test(p))
+        .join(' ')
     }
   } catch {
     // lsof / findstr exit non-zero when nothing found -> port is free

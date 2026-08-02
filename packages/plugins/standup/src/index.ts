@@ -1,15 +1,11 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { exec } from '@devcli/core'
 import { symbols } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
 
 function git(args: string): string {
-  try {
-    return execSync(`git ${args}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return ''
-  }
+  return exec('git', args.split(/\s+/), { encoding: 'utf-8' })
 }
 
 function isRepo(): boolean {
@@ -25,10 +21,9 @@ interface CommitEntry {
 }
 
 function getCommits(since: string, author?: string): CommitEntry[] {
-  const authorFilter = author ? `--author=${author}` : ''
-  const log = git(
-    `log --since="${since}" ${authorFilter} --format="%h|||%an|||%ai|||%s|||%b===" --no-merges`,
-  )
+  const args = ['log', `--since=${since}`, '--format=%h|||%an|||%ai|||%s|||%b===', '--no-merges']
+  if (author) args.push(`--author=${author}`)
+  const log = exec('git', args, { encoding: 'utf-8' })
   if (!log) return []
   return log
     .split('===')

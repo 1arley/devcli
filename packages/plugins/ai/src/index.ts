@@ -1,12 +1,12 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { exec } from '@devcli/core'
 import { symbols, withSpinner, createTable } from '@devcli/ui'
 import chalk from 'chalk'
 import { loadConfig, writeConfig } from '@devcli/config'
-import { execSync } from 'node:child_process'
 import * as readline from 'node:readline'
 import { stdin as processStdin, stdout as processStdout } from 'node:process'
-import { existsSync } from 'node:fs'
+import { existsSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Single shared readline interface across all prompts.
@@ -23,6 +23,11 @@ function getRL(): readline.Interface {
     })
   }
   return _rl
+}
+
+function closeRL(): void {
+  if (_rl && !rlClosed) _rl.close()
+  _rl = null
 }
 
 interface ProviderInfo {
@@ -273,7 +278,12 @@ async function readConfigRaw(): Promise<Record<string, unknown>> {
 async function writeConfigRaw(config: Record<string, unknown>): Promise<void> {
   const { writeFile } = await import('node:fs/promises')
   const path = configFilePath()
-  await writeFile(path, JSON.stringify(config, null, 2) + '\n')
+  await writeFile(path, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 })
+  try {
+    chmodSync(path, 0o600)
+  } catch {
+    /* best effort */
+  }
 }
 
 async function aiFetch(
@@ -294,7 +304,8 @@ async function aiFetch(
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
     if (provider === 'gemini') {
-      url = `${baseUrl}/models/${model}:generateContent?key=${apiKey}`
+      url = `${baseUrl}/models/${model}:generateContent`
+      headers['x-goog-api-key'] = apiKey!
       const response = await fetch(url, {
         method: 'POST',
         headers,
@@ -446,11 +457,12 @@ function generateSuggestions(input: string, errorType: string | null): string[] 
 }
 
 function git(args: string): string {
-  try {
-    return execSync(`git ${args}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return ''
-  }
+  return exec('git', args.split(/\s+/), { encoding: 'utf-8' })
+}
+
+function gitCommit(subject: string, body: string): string {
+  const flag = body ? ['-m', subject, '-m', body] : ['-m', subject]
+  return exec('git', ['commit', ...flag], { encoding: 'utf-8' })
 }
 
 function isRepo(): boolean {
@@ -473,7 +485,11 @@ export const createAiPlugin: PluginFactory = (): Plugin => ({
     ai.command('setup')
       .description('Interactive AI provider setup wizard')
       .action(async () => {
-        await interactiveSetup()
+        try {
+          await interactiveSetup()
+        } finally {
+          closeRL()
+        }
       })
 
     ai.command('set')
@@ -696,9 +712,8 @@ export const createAiPlugin: PluginFactory = (): Plugin => ({
         console.log(chalk.cyan(`\n${msg}\n`))
 
         if (options.execute) {
-          git(
-            `commit -m "${subject.replace(/"/g, '\\"')}" -m "${msg.slice(subject.length).trim().replace(/"/g, '\\"')}"`,
-          )
+          const body = msg.slice(subject.length).trim()
+          gitCommit(subject, body)
           console.log(`${symbols.success} Committed: ${subject}`)
         } else {
           console.log(`${symbols.info} To commit: ${chalk.cyan(`git commit -m "${subject}"`)}`)
@@ -714,7 +729,7 @@ export const createAiPlugin: PluginFactory = (): Plugin => ({
           console.log(`${symbols.error} Not a Git repository`)
           return
         }
-        const log = git(`log --since="${range}" --format="%s" --no-merges`)
+        const log = exec('git', ['log', `--since=${range}`, '--format=%s', '--no-merges'])
         if (!log) {
           console.log(`${symbols.info} No commits since "${range}"`)
           return

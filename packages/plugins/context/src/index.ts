@@ -1,18 +1,10 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { tryExec } from '@devcli/core'
 import { infoBox, banner, symbols } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-
-function exec(cmd: string): string | null {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return null
-  }
-}
 
 interface GitStatus {
   branch: string
@@ -40,26 +32,27 @@ interface DepsInfo {
 }
 
 function getGitStatus(): GitStatus | null {
-  if (exec('git rev-parse --is-inside-work-tree') !== 'true') return null
-  const branch = exec('git rev-parse --abbrev-ref HEAD') ?? 'unknown'
-  const ahead = exec('git rev-list --count @{u}..HEAD') ?? '0'
-  const behind = exec('git rev-list --count HEAD..@{u}') ?? '0'
-  const status = exec('git status --porcelain') ?? ''
+  if (tryExec('git', ['rev-parse', '--is-inside-work-tree']) !== 'true') return null
+  const branch = tryExec('git', ['rev-parse', '--abbrev-ref', 'HEAD']) ?? 'unknown'
+  const ahead = tryExec('git', ['rev-list', '--count', '@{u}..HEAD']) ?? '0'
+  const behind = tryExec('git', ['rev-list', '--count', 'HEAD..@{u}']) ?? '0'
+  const status = tryExec('git', ['status', '--porcelain']) ?? ''
   const modified = status.split('\n').filter(Boolean).length
   const untracked =
-    exec('git ls-files --others --exclude-standard')?.split('\n').filter(Boolean).length ?? 0
+    tryExec('git', ['ls-files', '--others', '--exclude-standard'])?.split('\n').filter(Boolean)
+      .length ?? 0
   return { branch, ahead, behind, modified, untracked }
 }
 
 function getDockerInfo(): DockerInfo | null {
-  const ps = exec('docker ps --format "{{.Names}}" 2>/dev/null')
+  const ps = tryExec('docker', ['ps', '--format', '{{.Names}}'])
   if (!ps) return null
   const names = ps.split('\n').filter(Boolean)
   return { running: names.length, names }
 }
 
 function getPorts(): PortInfo[] {
-  const out = exec('lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null')
+  const out = tryExec('lsof', ['-iTCP', '-sTCP:LISTEN', '-P', '-n'])
   if (!out) return []
   return out
     .split('\n')
@@ -77,7 +70,7 @@ function getDepInfo(): DepsInfo | null {
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
   const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) }
   const total = Object.keys(deps).length
-  const outdated = exec('npm outdated --json 2>/dev/null')
+  const outdated = tryExec('npm', ['outdated', '--json'])
   if (!outdated) return { total, outdated: 0, outOfDate: 0, major: 0 }
   try {
     const json = JSON.parse(outdated)

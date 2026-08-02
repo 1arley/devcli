@@ -23,6 +23,11 @@ function readInput(): Promise<string> {
   })
 }
 
+/**
+ * Minimal YAML-to-JSON converter supporting flat key:value pairs and one level
+ * of nesting. Does NOT support anchors, aliases, block scalars, multi-line strings,
+ * flow collections, or arrays. For complex YAML, use a dedicated YAML library.
+ */
 function yamlToJsonObject(yamlStr: string): Record<string, unknown> {
   const lines = yamlStr.split('\n').filter((l) => l.trim() && !l.startsWith('#'))
   const result: Record<string, unknown> = {}
@@ -60,6 +65,10 @@ function parseYamlValue(value: string): unknown {
   return v
 }
 
+/**
+ * Convert a JSON value to a minimal YAML string. Supports nested objects and
+ * arrays but does not handle special string escaping or multi-line strings.
+ */
 function jsonToYamlInner(obj: unknown, indent: number = 0): string {
   const pad = '  '.repeat(indent)
   if (obj === null || obj === undefined) return 'null'

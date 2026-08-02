@@ -1,20 +1,17 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory, PluginRegistry } from '@devcli/core'
+import { exec } from '@devcli/core'
 import { createTable, symbols, withSpinner } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 
 const PLUGIN_PREFIX = '@devcli/plugin-'
 
 function searchNpm(query: string): { name: string; description: string; version: string }[] {
+  const output = exec('npm', ['search', query, '--json'], { timeout: 10000 })
+  if (!output) return []
   try {
-    const output = execSync(`npm search ${query} --json 2>/dev/null`, {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 10000,
-    })
     const results = JSON.parse(output)
     if (!Array.isArray(results)) return []
     return results
@@ -134,57 +131,62 @@ function wirePluginIntoCLI(root: string, pluginName: string): string[] {
   const tsupPath = join(cliDir, 'tsup.config.ts')
   const tsconfigPath = join(cliDir, 'tsconfig.json')
 
-  // Fix registry.ts
+  // Fix registry.ts — append import after the last existing plugin import,
+  // and append the entry to the end of the entries array.
   try {
     let content = readFileSync(registryPath, 'utf-8')
     const importLine = `import { create${pascal}Plugin } from '${fullName}'`
     if (!content.includes(importLine)) {
-      const importAnchor = `import { createPluginPluginFactory } from '@devcli/plugin-plugin'`
-      content = content.replace(importAnchor, `${importAnchor}\n${importLine}`)
-      const entryLine = `    ['${pluginName}', create${pascal}Plugin],`
-      const entryAnchor = `    ['logs', createLogsPlugin],`
-      content = content.replace(entryAnchor, `${entryAnchor}\n${entryLine}`)
+      content = content.replace(
+        /(import \{ createPluginPluginFactory \} from '@devcli\/plugin-plugin'\n)/,
+        `$1${importLine}\n`,
+      )
+      content = content.replace(
+        /( {2}\['logs', createLogsPlugin\],?\n)(?! {2}\] as const)/,
+        `$1  ['${pluginName}', create${pascal}Plugin],\n`,
+      )
       writeFileSync(registryPath, content)
     }
   } catch {
     errors.push('registry.ts')
   }
 
-  // Fix package.json
+  // Fix package.json — append after the last @devcli/plugin-* dep.
   try {
     let content = readFileSync(pkgPath, 'utf-8')
     const depLine = `"${fullName}": "workspace:*"`
     if (!content.includes(depLine)) {
-      const depAnchor = `"@devcli/plugin-plugin": "workspace:*"`
-      content = content.replace(depAnchor, `${depAnchor},\n    ${depLine}`)
+      content = content.replace(
+        /("@devcli\/plugin-[^"]+": "workspace:\*",\n)(?!.*"@devcli\/plugin-)/s,
+        `$1    ${depLine},\n`,
+      )
       writeFileSync(pkgPath, content)
     }
   } catch {
     errors.push('package.json')
   }
 
-  // Fix tsup.config.ts
+  // Fix tsup.config.ts — append after the last @devcli/plugin-* entry.
   try {
     let content = readFileSync(tsupPath, 'utf-8')
     const entry = `    '${fullName}',`
     if (!content.includes(entry)) {
-      const anchor = `    '@devcli/plugin-plugin',`
-      content = content.replace(anchor, `${anchor}\n${entry}`)
+      content = content.replace(/( {4}'@devcli\/plugin-[^']+',)(\n {2}\])/, `$1\n${entry}$2`)
       writeFileSync(tsupPath, content)
     }
   } catch {
     errors.push('tsup.config.ts')
   }
 
-  // Fix tsconfig.json
+  // Fix tsconfig.json — append path mappings after the last plugin path.
   try {
     let content = readFileSync(tsconfigPath, 'utf-8')
     const pathEntry = `"@devcli/plugin-${pluginName}": ["../plugins/${pluginName}/src"]`
+    const pathEntryGlob = `"@devcli/plugin-${pluginName}/*": ["../plugins/${pluginName}/src/*"]`
     if (!content.includes(pathEntry)) {
-      const pathAnchor = `"@devcli/plugin-plugin/*": ["../plugins/plugin/src/*"]`
       content = content.replace(
-        pathAnchor,
-        `${pathAnchor},\n      "@devcli/plugin-${pluginName}": ["../plugins/${pluginName}/src"],\n      "@devcli/plugin-${pluginName}/*": ["../plugins/${pluginName}/src/*"]`,
+        /("@devcli\/plugin-[^"]+": \[\.\.\/plugins\/[^/]+\/src\/\*\](,?)\n)/,
+        `$1      ${pathEntry},\n      ${pathEntryGlob}\n`,
       )
       writeFileSync(tsconfigPath, content)
     }

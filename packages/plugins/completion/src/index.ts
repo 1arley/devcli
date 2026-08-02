@@ -1,31 +1,27 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { exec } from '@devcli/core'
 import { symbols } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
 
 function getCommands(): string[] {
-  try {
-    const help = execSync('node packages/cli/dist/index.js --help 2>/dev/null', {
-      encoding: 'utf-8',
-    })
-    const lines = help.split('\n')
-    const commands: string[] = []
-    let inCommands = false
-    for (const line of lines) {
-      if (line.includes('Commands:')) {
-        inCommands = true
-        continue
-      }
-      if (inCommands && line.trim() && !line.includes('Options:')) {
-        const match = line.trim().match(/^(\S+)/)
-        if (match && match[1] && !match[1].startsWith('-')) commands.push(match[1])
-      }
+  const bin = process.argv[1] ?? 'dev'
+  const help = exec('node', [bin, '--help'])
+  if (!help) return []
+  const lines = help.split('\n')
+  const commands: string[] = []
+  let inCommands = false
+  for (const line of lines) {
+    if (line.includes('Commands:')) {
+      inCommands = true
+      continue
     }
-    return commands
-  } catch {
-    return []
+    if (inCommands && line.trim() && !line.includes('Options:')) {
+      const match = line.trim().match(/^(\S+)/)
+      if (match && match[1] && !match[1].startsWith('-')) commands.push(match[1])
+    }
   }
+  return commands
 }
 
 function generateZsh(commands: string[]): string {
