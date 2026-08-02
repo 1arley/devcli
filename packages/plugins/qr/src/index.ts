@@ -27,10 +27,11 @@ export const createQrPlugin: PluginFactory = (): Plugin => {
             const opts = { type: 'terminal', small: false, errorCorrectionLevel: 'M' } as const
             const terminal = await QRCode.toString(text, opts)
             if (options.output) {
-              // eslint-disable-next-line no-control-regex
+              /* eslint-disable no-control-regex */
               const ascii = terminal
                 .replace(/\u001b\[[0-9;]*m/g, '')
                 .replace(/\u001b\[[0-9;]*[A-Za-z]/g, '')
+              /* eslint-enable no-control-regex */
               writeFileSync(resolve(options.output), ascii + '\n')
               console.log(`${symbols.success} QR code saved to ${chalk.bold(options.output)}`)
             } else {
