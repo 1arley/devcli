@@ -1,6 +1,6 @@
 {
   "name": "@1arley/devcli",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "description": "Dev CLI — the Raycast of the Terminal for Developers",
   "type": "module",
   "license": "MIT",
