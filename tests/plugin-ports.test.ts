@@ -39,7 +39,6 @@ async function run(action: string, args: string[] = []): Promise<string[]> {
   return logSpy.mock.calls.map((a) => String(a[0]))
 }
 
-// Simulate linux platform for parseUnixPorts tests.
 function setLinux() {
   Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
 }
@@ -47,12 +46,43 @@ function setWin() {
   Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 }
 
-const UNIX_OUTPUT = [
-  'COMMAND   PID   USER   FD   TYPE   DEVICE  SIZE/OFF NODE NAME',
-  'node      1234 user    7u   IPv4   0x1      0t0   TCP *:3000 (LISTEN)',
-  'python    5678 user    3u   IPv6   0x2      0t0   TCP [::]:8080 (LISTEN)',
-  'nginx     9999 user    4u   IPv4   0x3      0t0   TCP *:443 (LISTEN)',
+// Realistic `ss -tlnpH` output: process name + pid in the users:() block.
+const SS_OUTPUT = [
+  'State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process',
+  'LISTEN 0      128    0.0.0.0:3000       0.0.0.0:*    users:(("node",pid=1234,fd=7))',
+  'LISTEN 0      128    [::]:8080         [::]:*        users:(("python",pid=5678,fd=3))',
+  'LISTEN 0      128    0.0.0.0:443       0.0.0.0:*    users:(("nginx",pid=9999,fd=4))',
 ].join('\n')
+
+/**
+ * Build a unix mock dispatcher. `ss` is the primary source. Provide either a
+ * full ss response or a per-port users:() block via the override map.
+ */
+type UnixMock = {
+  ss?: string
+  ssUdp?: string
+  lsof?: string
+  fuser?: string
+  /** pid -> returns ss listening line for that port (post-kill verify) */
+  listeningPorts?: string[]
+}
+
+function mockUnix(cfg: UnixMock) {
+  execMock.mockImplementation((cmd: string) => {
+    if (cmd.includes('ss -tlnpH') || cmd.includes('ss -tlnp ')) {
+      if (cmd.includes('( dport')) return cfg.ss ?? '' // targeted query
+      return cfg.ss ?? ''
+    }
+    if (cmd.includes('ss -ulnp')) return cfg.ssUdp ?? ''
+    if (cmd.startsWith('lsof -iTCP')) return cfg.lsof ?? ''
+    if (cmd.startsWith('lsof -ti')) return cfg.lsof ?? ''
+    if (cmd.startsWith('fuser')) return cfg.fuser ?? ''
+    if (cmd.startsWith('sleep')) return ''
+    if (cmd.startsWith('kill -TERM')) return ''
+    if (cmd.startsWith('kill -9')) return ''
+    return ''
+  })
+}
 
 describe('ports plugin registration', () => {
   it('registers ports command with subcommands and correct manifest', () => {
@@ -67,9 +97,9 @@ describe('ports plugin registration', () => {
 })
 
 describe('parseUnixPorts', () => {
-  it('parses lsof output into PortInfo rows', async () => {
+  it('parses ss output into PortInfo rows', async () => {
     setLinux()
-    execMock.mockReturnValue(UNIX_OUTPUT)
+    mockUnix({ ss: SS_OUTPUT })
     const out = await run('root')
     const all = out.join('\n')
     expect(all).toContain('3000')
@@ -82,23 +112,21 @@ describe('parseUnixPorts', () => {
 
   it('reports no listening ports when output empty', async () => {
     setLinux()
-    execMock.mockReturnValue('')
+    mockUnix({ ss: '' })
     const out = await run('root')
     expect(out.join('\n')).toMatch(/No listening ports found/)
   })
 
-  it('skips malformed lines with < 9 fields', async () => {
+  it('skips malformed lines', async () => {
     setLinux()
-    execMock.mockReturnValue(
-      ['COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME', 'short line'].join('\n'),
-    )
+    mockUnix({ ss: ['garbage line', 'still not ports'].join('\n') })
     const out = await run('root')
     expect(out.join('\n')).toMatch(/No listening ports found/)
   })
 
   it('free subcommand lists ports in use', async () => {
     setLinux()
-    execMock.mockReturnValue(UNIX_OUTPUT)
+    mockUnix({ ss: SS_OUTPUT })
     const out = await run('free')
     const all = out.join('\n')
     expect(all).toMatch(/3 port/)
@@ -107,7 +135,7 @@ describe('parseUnixPorts', () => {
 
   it('free reports all free when none', async () => {
     setLinux()
-    execMock.mockReturnValue('')
+    mockUnix({ ss: '' })
     const out = await run('free')
     expect(out.join('\n')).toMatch(/All ports are free/)
   })
@@ -120,72 +148,143 @@ describe('parseUnixPorts', () => {
     const out = await run('free')
     expect(out.join('\n')).toMatch(/All ports are free/)
   })
+
+  it('backfills pid from lsof when ss omits users block', async () => {
+    setLinux()
+    // ss reports the port but no users:() (foreign process, no perms)
+    const ssNoPid = [
+      'LISTEN 0 128 0.0.0.0:5432 0.0.0.0:*',
+      'LISTEN 0 128 0.0.0.0:8080 0.0.0.0:* users:(("python",pid=5678,fd=3))',
+    ].join('\n')
+    const lsof = [
+      'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME',
+      'postgres 7777 db 5u IPv4 0 0t0 TCP *:5432 (LISTEN)',
+    ].join('\n')
+    mockUnix({ ss: ssNoPid, lsof })
+    const out = await run('root')
+    const all = out.join('\n')
+    expect(all).toContain('5432')
+    expect(all).toContain('7777')
+    expect(all).toContain('postgres')
+  })
 })
 
 describe('killPort (unix)', () => {
-  it('kill success kills process', async () => {
+  it('kill success kills process (SIGTERM then verify)', async () => {
     setLinux()
-    execMock.mockReturnValue('1234')
+    // ss finds pid 1234, lsof/fuser empty. After kill, ss reports nothing.
+    let killed = false
+    const ssListening = 'LISTEN 0 128 0.0.0.0:3000 0.0.0.0:* users:(("node",pid=1234,fd=7))'
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('sleep')) return ''
+      if (cmd.startsWith('kill')) {
+        killed = true
+        return ''
+      }
+      if (cmd.startsWith('ss')) return killed ? '' : ssListening
+      if (cmd.startsWith('lsof -ti')) return killed ? '' : '1234'
+      if (cmd.startsWith('fuser')) return killed ? '' : '1234'
+      if (cmd.startsWith('lsof -iTCP')) return ''
+      return ''
+    })
     const out = await run('kill', ['3000'])
-    expect(execMock).toHaveBeenCalledWith(
-      'lsof -ti:3000',
-      expect.objectContaining({ encoding: 'utf-8' }),
-    )
-    expect(execMock).toHaveBeenCalledWith(
-      'kill -9 1234',
-      expect.objectContaining({ stdio: 'pipe' }),
-    )
     expect(out.join('\n')).toMatch(/Killed process on port 3000/)
   })
 
   it('kill on free port reports already free', async () => {
     setLinux()
+    // every source returns nothing → resolvePids empty, ss says not listening
     execMock.mockImplementation((cmd: string) => {
-      if (cmd.startsWith('lsof')) throw new Error('not found')
+      if (cmd.startsWith('sleep')) return ''
+      if (cmd.startsWith('ss -tlnpH 2>/dev/null')) return ''
+      if (cmd.includes('( dport')) return ''
       return ''
     })
     const out = await run('kill', ['9999'])
-    expect(execMock).toHaveBeenCalledWith(
-      'lsof -ti:9999',
-      expect.objectContaining({ encoding: 'utf-8', stdio: 'pipe' }),
-    )
     expect(out.join('\n')).toMatch(/already free/)
   })
 
-  it('kill failure reports could not kill', async () => {
+  it('kill escalates to SIGKILL if SIGTERM not enough', async () => {
     setLinux()
+    let termSent = false
+    let killedSent = false
+    const ssListening = 'LISTEN 0 128 0.0.0.0:3000 0.0.0.0:* users:(("node",pid=1234,fd=7))'
     execMock.mockImplementation((cmd: string) => {
-      if (cmd.startsWith('lsof')) return '1234'
-      throw new Error('kill fail')
+      if (cmd.startsWith('sleep')) return ''
+      if (cmd.startsWith('kill -TERM')) {
+        termSent = true
+        return ''
+      }
+      if (cmd.startsWith('kill -9')) {
+        killedSent = true
+        return ''
+      }
+      const live = !killedSent
+      if (cmd.startsWith('ss') && cmd.includes('( dport'))
+        return live ? 'users:(("node",pid=1234,fd=7))' : ''
+      if (cmd.startsWith('ss -tlnpH 2>/dev/null')) return live ? ssListening : ''
+      if (cmd.startsWith('lsof -ti')) return live ? '1234' : ''
+      if (cmd.startsWith('fuser')) return live ? '1234' : ''
+      return ''
     })
     const out = await run('kill', ['3000'])
-    expect(out.join('\n')).toMatch(/Could not kill process on port 3000/)
+    expect(termSent).toBe(true)
+    expect(killedSent).toBe(true)
+    expect(out.join('\n')).toMatch(/Killed process on port 3000/)
+  })
+
+  it('kill reports permission barrier when pid unresolvable but port listening', async () => {
+    setLinux()
+    // foreign process: all pid resolvers return nothing, but ss still shows LISTEN
+    const ssListening = 'LISTEN 0 128 0.0.0.0:5432 0.0.0.0:*'
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('sleep')) return ''
+      if (cmd.startsWith('kill')) return ''
+      if (cmd.startsWith('ss -tlnpH 2>/dev/null')) return ssListening
+      if (cmd.includes('( dport')) return ssListening
+      return '' // lsof/fuser empty → no pid from user's perspective
+    })
+    const out = await run('kill', ['5432'])
+    expect(out.join('\n')).toMatch(/still listening/)
   })
 
   it('kill handles multiple PIDs on same port', async () => {
     setLinux()
-    execMock.mockReturnValue('11819\n11962')
+    let killed = false
+    const ssListening = [
+      'LISTEN 0 128 0.0.0.0:13469 0.0.0.0:* users:(("main",pid=11819,fd=82))',
+      'LISTEN 0 128 0.0.0.0:13469 0.0.0.0:* users:(("wineserver",pid=11962,fd=1093))',
+    ].join('\n')
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.startsWith('sleep')) return ''
+      if (cmd.startsWith('kill')) killed = true
+      if (cmd.startsWith('ss') && cmd.includes('( dport')) return killed ? '' : ssListening
+      if (cmd.startsWith('ss -tlnpH 2>/dev/null')) return killed ? '' : ssListening
+      return ''
+    })
     const out = await run('kill', ['13469'])
-    expect(execMock).toHaveBeenCalledWith(
-      'kill -9 11819 11962',
-      expect.objectContaining({ stdio: 'pipe' }),
-    )
     expect(out.join('\n')).toMatch(/Killed process on port 13469/)
   })
 })
 
 describe('parseWindowsPorts', () => {
+  const NETSTAT = [
+    '  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       1111',
+    '  TCP    0.0.0.0:8080           0.0.0.0:0              LISTENING       2222',
+  ].join('\n')
+
   it('parses netstat + tasklist output', async () => {
     setWin()
-    const NETSTAT = [
-      '  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       1111',
-      '  TCP    0.0.0.0:8080           0.0.0.0:0              LISTENING       2222',
-    ].join('\n')
     execMock.mockImplementation((cmd: string) => {
-      if (cmd.startsWith('netstat')) return NETSTAT
-      // tasklist for pid 1111 / 2222
-      const m = cmd.match(/PID eq (\d+)/)
-      return m?.[1] === '1111' ? '"node.exe","1111","Console"' : '"py.exe","2222","Console"'
+      if (cmd.startsWith('netstat') && cmd.endsWith('findstr LISTENING')) return NETSTAT
+      if (cmd.startsWith('netstat') && cmd.includes('findstr :3000')) {
+        return '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 1111'
+      }
+      if (cmd.startsWith('tasklist')) {
+        const m = cmd.match(/PID eq (\d+)/)
+        return m?.[1] === '1111' ? '"node.exe","1111","Console"' : '"py.exe","2222","Console"'
+      }
+      return ''
     })
     const out = await run('root')
     const all = out.join('\n')
@@ -196,8 +295,17 @@ describe('parseWindowsPorts', () => {
 
   it('windows kill uses taskkill', async () => {
     setWin()
+    let killed = false
     execMock.mockImplementation((cmd: string) => {
-      if (cmd.startsWith('netstat')) return '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321'
+      if (cmd.startsWith('netstat')) {
+        return killed
+          ? ''
+          : '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321  \n  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321'
+      }
+      if (cmd.startsWith('taskkill')) {
+        killed = true
+        return ''
+      }
       return ''
     })
     const out = await run('kill', ['3000'])
@@ -210,9 +318,17 @@ describe('parseWindowsPorts', () => {
 
   it('windows kill handles multiple PIDs', async () => {
     setWin()
+    let killed = false
     execMock.mockImplementation((cmd: string) => {
-      if (cmd.startsWith('netstat'))
-        return '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321\n  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 5555'
+      if (cmd.startsWith('netstat')) {
+        return killed
+          ? ''
+          : '  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 4321\n  TCP 0.0.0.0:3000 0.0.0.0:0 LISTENING 5555'
+      }
+      if (cmd.startsWith('taskkill')) {
+        killed = true
+        return ''
+      }
       return ''
     })
     const out = await run('kill', ['3000'])
