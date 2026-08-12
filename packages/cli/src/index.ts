@@ -3,7 +3,13 @@ import { loadPlugins } from '@devcli/core'
 import { createRegistry } from './registry.js'
 import { showDiscovery } from './discovery.js'
 
-const VERSION = '0.0.0'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const VERSION = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+  .version as string
 
 program.name('dev').description('The Raycast of the Terminal for Developers').version(VERSION)
 
