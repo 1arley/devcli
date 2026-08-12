@@ -14,6 +14,7 @@ import {
 } from './session'
 import { renderAsciiArt } from './render'
 import { consumePendingStashRef } from './tools'
+import { PROVIDERS, PROVIDER_MAP } from './providers'
 
 export interface SlashCommandResult {
   output: string
@@ -21,6 +22,7 @@ export interface SlashCommandResult {
   shouldClear: boolean
   newMode?: 'build' | 'plan'
   newModel?: string
+  newProvider?: string
 }
 
 export type AskInputFn = (prompt: string) => Promise<string>
@@ -118,6 +120,53 @@ export async function handleSlashCommand(
         shouldExit: false,
         shouldClear: false,
         newModel: args,
+      }
+    }
+
+    case 'provider': {
+      if (!args) {
+        const list = PROVIDERS.map((p) =>
+          p.name === session.provider ? chalk.green(`• ${p.name} (active)`) : `  ${p.name}`,
+        ).join('\n')
+        return {
+          output:
+            chalk.bold.cyan('Current provider: ') +
+            chalk.bold(session.provider) +
+            '\n\nAvailable providers:\n' +
+            list +
+            '\n\nUsage: /provider <name> [model]',
+          shouldExit: false,
+          shouldClear: false,
+        }
+      }
+      const [provName, modelName] = args.split(/\s+/)
+      const provInfo = PROVIDER_MAP[provName!]
+      if (!provInfo) {
+        return {
+          output:
+            chalk.red('✗') +
+            ' Unknown provider: ' +
+            provName +
+            '\nAvailable: ' +
+            PROVIDERS.map((p) => p.name).join(', '),
+          shouldExit: false,
+          shouldClear: false,
+        }
+      }
+      session.provider = provInfo.name
+      const chosenModel = modelName || provInfo.defaultModel
+      session.model = chosenModel
+      return {
+        output:
+          chalk.green('✓') +
+          ' Provider: ' +
+          chalk.bold(provInfo.name) +
+          ' | Model: ' +
+          chalk.bold(chosenModel),
+        shouldExit: false,
+        shouldClear: false,
+        newProvider: provInfo.name,
+        newModel: chosenModel,
       }
     }
 
@@ -248,6 +297,7 @@ function formatHelp(): string {
     ['file <path>', 'Add file to context'],
     ['mode', 'Toggle build/plan mode'],
     ['model [name]', 'Set or show model'],
+    ['provider [name]', 'Set or list AI provider'],
     ['save [name]', 'Save current session'],
     ['load <name>', 'Load a saved session'],
     ['sessions', 'List saved sessions'],

@@ -36,15 +36,6 @@ export interface StreamResult {
   }>
 }
 
-export interface StreamResult {
-  content: string
-  toolCalls: Array<{
-    id: string
-    type: 'function'
-    function: { name: string; arguments: string }
-  }>
-}
-
 export async function* streamChat(
   messages: StreamMessage[],
   providerConfig: ProviderConfig,

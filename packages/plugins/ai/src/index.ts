@@ -40,6 +40,19 @@ interface ProviderInfo {
 
 const PROVIDERS: ProviderInfo[] = [
   {
+    name: '9router',
+    baseUrl: 'https://api.9router.com/v1',
+    defaultModel: '9router/serious-work-coding',
+    models: [
+      '9router/serious-work-coding',
+      'gpt-4o',
+      'gpt-4o-mini',
+      'claude-3-5-sonnet-20241022',
+      'deepseek-chat',
+      'deepseek-reasoner',
+    ],
+  },
+  {
     name: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o-mini',
@@ -226,15 +239,26 @@ async function interactiveSetup(): Promise<void> {
     console.log(`  ${chalk.cyan(String(i + 1).padStart(2))}. ${m}`)
   })
   console.log(`  ${chalk.cyan('  a')}. Use default (${info.defaultModel})`)
+  console.log(`  ${chalk.cyan('  c')}. Custom model name`)
   console.log('')
 
   let model = info.defaultModel
   let modelChosen = false
   while (!modelChosen) {
-    const modelChoice = (await ask(`  ${chalk.dim('Enter number or "a" for default')} `)).trim()
+    const modelChoice = (
+      await ask(`  ${chalk.dim('Enter number, "a" for default, or "c" for custom model')} `)
+    ).trim()
     if (modelChoice === 'a' || modelChoice === '') {
       model = info.defaultModel
       modelChosen = true
+    } else if (modelChoice === 'c') {
+      const customName = (await ask(`  ${chalk.dim('Enter custom model name')} `)).trim()
+      if (customName) {
+        model = customName
+        modelChosen = true
+      } else {
+        console.log(chalk.red('  Model name cannot be empty'))
+      }
     } else {
       const modelIdx = parseInt(modelChoice, 10) - 1
       if (modelIdx >= 0 && modelIdx < info.models.length) {

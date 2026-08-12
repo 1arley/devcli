@@ -13,7 +13,7 @@ import {
   type ChatMessage,
 } from './session'
 import { getToolDefinitions, executeTool, type AskPermissionFn } from './tools'
-import { streamChat, collectStreamResult, type StreamMessage } from './stream'
+import { streamChat, collectStreamResult, type StreamMessage, type StreamResult } from './stream'
 import { handleSlashCommand } from './commands'
 import {
   renderMarkdown,
@@ -31,6 +31,24 @@ export interface ChatOptions {
   auto?: boolean
   oneShot?: string
 }
+
+const SLASH_COMMANDS = [
+  { cmd: '/help', desc: 'Show available commands' },
+  { cmd: '/provider', desc: 'Set or list AI provider' },
+  { cmd: '/model', desc: 'Set or show model' },
+  { cmd: '/file', desc: 'Add file to context' },
+  { cmd: '/mode', desc: 'Toggle build/plan mode' },
+  { cmd: '/clear', desc: 'Clear conversation context' },
+  { cmd: '/compact', desc: 'Compact conversation history' },
+  { cmd: '/save', desc: 'Save current session' },
+  { cmd: '/load', desc: 'Load a saved session' },
+  { cmd: '/sessions', desc: 'List saved sessions' },
+  { cmd: '/export', desc: 'Export conversation to markdown' },
+  { cmd: '/undo', desc: 'Undo last file change' },
+  { cmd: '/init', desc: 'Generate AGENTS.md' },
+  { cmd: '/art', desc: 'Show ASCII art' },
+  { cmd: '/exit', desc: 'Exit dev chat' },
+]
 
 export async function startChat(opts: ChatOptions = {}): Promise<void> {
   const config = await loadConfig()
@@ -77,9 +95,21 @@ async function replLoop(
   providerConfig: ReturnType<typeof resolveProviderConfig>,
   permissions: ReturnType<typeof resolvePermissions>,
 ): Promise<void> {
+  const completer = (line: string) => {
+    if (line.startsWith('/')) {
+      const hits = SLASH_COMMANDS.filter((c) => c.cmd.startsWith(line))
+      if (hits.length > 0) {
+        return [hits.map((h) => h.cmd), line]
+      }
+      return [SLASH_COMMANDS.map((h) => h.cmd), line]
+    }
+    return [[], line]
+  }
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
+    completer,
   })
 
   const askInput = (prompt: string): Promise<string> =>
@@ -116,6 +146,23 @@ async function replLoop(
     const trimmed = input.trim()
     if (!trimmed) continue
 
+    if (
+      trimmed === '/' ||
+      (trimmed.startsWith('/') &&
+        !trimmed.includes(' ') &&
+        !SLASH_COMMANDS.some((c) => c.cmd === trimmed))
+    ) {
+      const matches = SLASH_COMMANDS.filter((c) => c.cmd.startsWith(trimmed))
+      if (matches.length > 0) {
+        console.log(chalk.bold.cyan('\nAvailable slash commands:'))
+        for (const m of matches) {
+          console.log(`  ${chalk.cyan(m.cmd.padEnd(14))} ${chalk.gray(m.desc)}`)
+        }
+        console.log()
+        continue
+      }
+    }
+
     if (trimmed.startsWith('!')) {
       const cmdOutput = await runInlineCommand(trimmed.slice(1))
       context.addCommandOutput(cmdOutput)
@@ -145,7 +192,14 @@ async function replLoop(
         return
       }
       if (result.newMode) session.mode = result.newMode
-      if (result.newModel) session.model = result.newModel
+      if (result.newModel) {
+        session.model = result.newModel
+        providerConfig.model = result.newModel
+      }
+      if (result.newProvider) {
+        session.provider = result.newProvider
+        providerConfig.provider = result.newProvider
+      }
       continue
     }
 
@@ -196,14 +250,7 @@ async function processConversation(
     console.log()
 
     const gen = streamChat(streamMessages, providerConfig, tools)
-    let result: {
-      content: string
-      toolCalls: Array<{
-        id: string
-        type: 'function'
-        function: { name: string; arguments: string }
-      }>
-    }
+    let result: StreamResult
 
     try {
       result = await collectStreamResult(gen, (chunk) => {

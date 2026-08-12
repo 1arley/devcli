@@ -10,6 +10,19 @@ export interface ProviderInfo {
 
 export const PROVIDERS: ProviderInfo[] = [
   {
+    name: '9router',
+    baseUrl: 'https://api.9router.com/v1',
+    defaultModel: '9router/serious-work-coding',
+    models: [
+      '9router/serious-work-coding',
+      'gpt-4o',
+      'gpt-4o-mini',
+      'claude-3-5-sonnet-20241022',
+      'deepseek-chat',
+      'deepseek-reasoner',
+    ],
+  },
+  {
     name: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o-mini',
