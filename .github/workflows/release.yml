@@ -56,8 +56,6 @@ jobs:
 
       - name: Publish to npm
         run: node scripts/publish.mjs
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create Git Tag
         run: |
