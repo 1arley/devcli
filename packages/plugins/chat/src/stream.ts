@@ -15,14 +15,25 @@ export interface StreamMessage {
 }
 
 export interface StreamChunk {
-  type: 'content' | 'tool_calls' | 'done' | 'error'
+  type: 'content' | 'tool_calls' | 'done' | 'error' | 'reasoning'
   content?: string
+  reasoning?: string
   toolCalls?: Array<{
     index: number
     id?: string
     function?: { name?: string; arguments?: string }
   }>
   error?: string
+}
+
+export interface StreamResult {
+  content: string
+  reasoning?: string
+  toolCalls: Array<{
+    id: string
+    type: 'function'
+    function: { name: string; arguments: string }
+  }>
 }
 
 export interface StreamResult {
@@ -142,6 +153,10 @@ async function* streamOpenAICompatible(
 
           const delta = choice.delta
           if (!delta) continue
+
+          if (delta.reasoning_content) {
+            yield { type: 'reasoning', reasoning: delta.reasoning_content }
+          }
 
           if (delta.content) {
             yield { type: 'content', content: delta.content }
@@ -276,6 +291,9 @@ async function* streamAnthropic(
             if (parsed.delta?.type === 'text_delta' && parsed.delta?.text) {
               yield { type: 'content', content: parsed.delta.text }
             }
+            if (parsed.delta?.type === 'thinking_delta' && parsed.delta?.thinking) {
+              yield { type: 'reasoning', reasoning: parsed.delta.thinking }
+            }
             if (parsed.delta?.type === 'input_json_delta' && parsed.delta?.partial_json) {
               yield {
                 type: 'tool_calls',
@@ -322,7 +340,7 @@ async function* streamAnthropic(
 async function* streamGemini(
   messages: StreamMessage[],
   config: ProviderConfig,
-  _tools: ToolDefinition[],
+  tools: ToolDefinition[],
 ): AsyncGenerator<StreamChunk> {
   const url = `${config.baseUrl}/models/${config.model}:streamGenerateContent?key=${config.apiKey}&alt=sse`
 
@@ -343,6 +361,18 @@ async function* streamGemini(
         }
       : {}),
     generationConfig: { maxOutputTokens: 4096 },
+  }
+
+  if (tools.length > 0) {
+    body['tools'] = [
+      {
+        functionDeclarations: tools.map((t) => ({
+          name: t.function.name,
+          description: t.function.description,
+          parameters: t.function.parameters,
+        })),
+      },
+    ]
   }
 
   let response: Response
@@ -387,9 +417,28 @@ async function* streamGemini(
         const data = trimmed.slice(6)
         try {
           const parsed = JSON.parse(data)
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
-          if (text) {
-            yield { type: 'content', content: text }
+          const candidate = parsed.candidates?.[0]
+          if (!candidate) continue
+          const parts = candidate.content?.parts ?? []
+          for (const part of parts) {
+            if (part.text) {
+              yield { type: 'content', content: part.text }
+            }
+            if (part.functionCall) {
+              yield {
+                type: 'tool_calls',
+                toolCalls: [
+                  {
+                    index: 0,
+                    id: `tc-${Date.now()}`,
+                    function: {
+                      name: part.functionCall.name,
+                      arguments: JSON.stringify(part.functionCall.args ?? {}),
+                    },
+                  },
+                ],
+              }
+            }
           }
         } catch {
           continue
@@ -408,6 +457,7 @@ export async function collectStreamResult(
   onChunk?: (chunk: StreamChunk) => void,
 ): Promise<StreamResult> {
   let content = ''
+  let reasoning = ''
   const toolCallMap = new Map<
     string,
     { id: string; type: 'function'; function: { name: string; arguments: string } }
@@ -418,6 +468,9 @@ export async function collectStreamResult(
     switch (chunk.type) {
       case 'content':
         content += chunk.content ?? ''
+        break
+      case 'reasoning':
+        reasoning += chunk.reasoning ?? ''
         break
       case 'tool_calls':
         for (const tc of chunk.toolCalls ?? []) {
@@ -444,6 +497,7 @@ export async function collectStreamResult(
 
   return {
     content,
+    reasoning: reasoning || undefined,
     toolCalls: Array.from(toolCallMap.values()),
   }
 }

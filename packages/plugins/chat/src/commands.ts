@@ -13,6 +13,7 @@ import {
   type SessionState,
 } from './session'
 import { renderAsciiArt } from './render'
+import { consumePendingStashRef } from './tools'
 
 export interface SlashCommandResult {
   output: string
@@ -187,6 +188,15 @@ export async function handleSlashCommand(
         }
       }
       try {
+        const stashRef = consumePendingStashRef()
+        if (stashRef) {
+          exec('git', ['stash', 'pop', stashRef])
+          return {
+            output: chalk.green('✓') + ' Undid last file changes (git stash pop)',
+            shouldExit: false,
+            shouldClear: false,
+          }
+        }
         exec('git', ['stash', 'pop'])
         return {
           output: chalk.green('✓') + ' Undid last change (git stash pop)',

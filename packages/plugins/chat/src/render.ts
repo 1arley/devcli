@@ -42,6 +42,15 @@ function createRenderer(): MarkdownRenderer {
   // Fallback: basic inline code highlighting
   return (text: string) => {
     return text
+      .replace(/```(\w+)?\n([\s\S]*?)```/g, (_m, lang: string | undefined, code: string) => {
+        try {
+          const { highlight } = require('cli-highlight')
+          if (highlight) return highlight(code, { language: lang ?? 'typescript' })
+        } catch {
+          // cli-highlight not available
+        }
+        return chalk.cyan(code)
+      })
       .replace(/`([^`]+)`/g, (_, code: string) => chalk.cyan(code))
       .replace(/\*\*([^*]+)\*\*/g, (_, t: string) => chalk.bold(t))
       .replace(/^\s*#+\s+(.+)$/gm, (_, h: string) => chalk.bold.cyan(h))

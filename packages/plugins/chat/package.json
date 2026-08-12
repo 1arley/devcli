@@ -22,7 +22,10 @@
     "@devcli/ui": "workspace:*",
     "@devcli/config": "workspace:*",
     "chalk": "^5.3.0",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "marked": "^14.1.0",
+    "marked-terminal": "^7.0.0",
+    "cli-highlight": "^2.1.11"
   },
   "devDependencies": {
     "tsup": "^8.3.0",

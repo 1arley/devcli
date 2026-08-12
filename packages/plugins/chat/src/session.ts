@@ -7,6 +7,7 @@ export type ChatMode = 'build' | 'plan'
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
+  reasoning?: string
   toolCallId?: string
   toolCalls?: ToolCall[]
   name?: string

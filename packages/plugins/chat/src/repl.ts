@@ -85,6 +85,15 @@ async function replLoop(
   const askInput = (prompt: string): Promise<string> =>
     new Promise((resolve) => rl.question(prompt, resolve))
 
+  const saveAndExit = (): void => {
+    saveSession(session)
+    rl.close()
+    process.exit(0)
+  }
+
+  process.on('SIGINT', saveAndExit)
+  process.on('SIGTERM', saveAndExit)
+
   const askPermission: AskPermissionFn = async (
     toolName: string,
     description: string,
@@ -198,8 +207,12 @@ async function processConversation(
 
     try {
       result = await collectStreamResult(gen, (chunk) => {
-        if (chunk.type === 'content' && chunk.content) {
+        if (chunk.type === 'reasoning' && chunk.reasoning) {
+          process.stdout.write(chalk.gray.dim(chunk.reasoning))
+        } else if (chunk.type === 'content' && chunk.content) {
           process.stdout.write(chunk.content)
+        } else if (chunk.type === 'error' && chunk.error) {
+          console.log(chalk.red('✗ Stream error: ') + chunk.error)
         } else if (chunk.type === 'tool_calls' && chunk.toolCalls) {
           for (const tc of chunk.toolCalls) {
             if (tc.function?.name) {
@@ -233,6 +246,7 @@ async function processConversation(
     addMessage(session, {
       role: 'assistant',
       content: result.content || '',
+      reasoning: result.reasoning,
       toolCalls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
     })
 

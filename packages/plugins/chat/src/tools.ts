@@ -5,6 +5,41 @@ import { readdirSync } from 'node:fs'
 import type { PermissionConfig, ToolName } from './permissions'
 import { isDenied, isAllowed, shouldAskUser, type Permission } from './permissions'
 
+let pendingStashRef: string | null = null
+
+function createGitSnapshot(cwd: string): void {
+  if (pendingStashRef) return
+  try {
+    const isRepo = execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+      encoding: 'utf-8',
+      cwd,
+    }).trim()
+    if (isRepo !== 'true') return
+    const hasChanges = execFileSync('git', ['status', '--porcelain'], {
+      encoding: 'utf-8',
+      cwd,
+    }).trim()
+    if (!hasChanges) return
+    const ref = execFileSync('git', ['stash', 'create'], {
+      encoding: 'utf-8',
+      cwd,
+    }).trim()
+    if (ref) pendingStashRef = ref
+  } catch {
+    // not a git repo or git unavailable
+  }
+}
+
+export function getPendingStashRef(): string | null {
+  return pendingStashRef
+}
+
+export function consumePendingStashRef(): string | null {
+  const ref = pendingStashRef
+  pendingStashRef = null
+  return ref
+}
+
 export interface ToolDefinition {
   type: 'function'
   function: {
@@ -215,6 +250,7 @@ export async function executeTool(
           askPermission,
         )
         if (!allowed) return { toolCallId, toolName, success: false, output: reason }
+        createGitSnapshot(cwd)
         const path = resolve(cwd, String(args['path'] ?? ''))
         const content = String(args['content'] ?? '')
         writeFileSync(path, content)
@@ -233,6 +269,7 @@ export async function executeTool(
           askPermission,
         )
         if (!allowed) return { toolCallId, toolName, success: false, output: reason }
+        createGitSnapshot(cwd)
         const path = resolve(cwd, String(args['path'] ?? ''))
         if (!existsSync(path))
           return { toolCallId, toolName, success: false, output: `File not found: ${args['path']}` }

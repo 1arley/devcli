@@ -29,6 +29,7 @@ export default defineConfig({
       '@devcli/core': resolve(__dirname, 'packages/core/src'),
       '@devcli/config': resolve(__dirname, 'packages/config/src'),
       '@devcli/ui': resolve(__dirname, 'tests/ui-stub.ts'),
+      '@devcli/plugin-chat': resolve(__dirname, 'packages/plugins/chat/src'),
       commander: resolve(__dirname, 'packages/plugins/jwt/node_modules/commander'),
       chalk: resolve(__dirname, 'packages/plugins/jwt/node_modules/chalk'),
     },
