@@ -29,6 +29,7 @@ export default defineConfig({
     '@devcli/plugin-context',
     '@devcli/plugin-clean',
     '@devcli/plugin-completion',
+    '@devcli/plugin-chat',
   ],
   external: ['react', 'ink', 'commander'],
   banner: {

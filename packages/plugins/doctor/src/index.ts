@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
+import { tryExec } from '@devcli/core'
 import { symbols } from '@devcli/ui'
-import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { platform, totalmem, freemem, cpus } from 'node:os'
 import chalk from 'chalk'
@@ -14,15 +14,8 @@ interface CheckResult {
 }
 
 function checkBin(cmd: string): CheckResult {
-  try {
-    const version = execSync(`${cmd} --version`, {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-    return { name: cmd, found: true, version }
-  } catch {
-    return { name: cmd, found: false }
-  }
+  const version = tryExec(cmd, ['--version'])
+  return version !== null ? { name: cmd, found: true, version } : { name: cmd, found: false }
 }
 
 function runDoctor(cwd: string = process.cwd()): void {

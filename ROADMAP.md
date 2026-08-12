@@ -26,6 +26,7 @@
 - [x] `dev logs` — aggregated log viewer
 - [x] `dev repo` — deeper analysis (dependency tree, bundle size)
 - [x] Plugin auto-discovery from npm (`dev plugin add @scope/plugin`)
+- [x] `dev chat` — AI coding agent REPL (streaming, tools, permissions, sessions)
 
 ## v1.2.0
 
@@ -47,3 +48,13 @@
 - [ ] Docker Swarm support
 - [ ] Plugin marketplace
 - [ ] Theme system
+
+## Chat Enhancements (Future)
+
+- [ ] Multi-agent orchestration (spawn subagents)
+- [ ] Diff-aware file context (only send changed lines)
+- [ ] Web UI companion for session history
+- [ ] Custom tool plugins (register tools via plugin system)
+- [ ] Voice input/output (Whisper + TTS)
+- [ ] MCP (Model Context Protocol) server compatibility
+- [ ] Reasoning blocks display (o1/o3, deepseek-reasoner)

@@ -3,7 +3,7 @@ import type { Plugin, PluginFactory } from '@devcli/core'
 import { isSafeIdentifier } from '@devcli/core'
 import { createTable, symbols } from '@devcli/ui'
 import chalk from 'chalk'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -116,11 +116,21 @@ export const createSshPlugin: PluginFactory = (): Plugin => {
           const user = options.user ?? entry?.user ?? ''
           const port = options.port ?? entry?.port ?? ''
           const hostName = entry?.hostName ?? host
-          const target = user ? `${user}@${hostName}` : hostName
-          const sshArgs = [port ? `-p ${port}` : '', target].filter(Boolean).join(' ')
-          console.log(`${symbols.info} Connecting to ${chalk.bold(target)}...`)
+          // No shell: every value is an argv element, so user/port/host can't
+          // be interpreted as ssh options or shell syntax.
+          const sshArgs: string[] = []
+          if (port) {
+            if (!/^\d+$/.test(port)) {
+              console.log(`${symbols.error} Invalid port: ${port}`)
+              return
+            }
+            sshArgs.push('-p', port)
+          }
+          if (user) sshArgs.push(`${user}@${hostName}`)
+          else sshArgs.push(hostName)
+          console.log(`${symbols.info} Connecting to ${chalk.bold(hostName)}...`)
           try {
-            execSync(`ssh ${sshArgs}`, { stdio: 'inherit' })
+            execFileSync('ssh', sshArgs, { stdio: 'inherit' })
           } catch {
             process.exit(1)
           }

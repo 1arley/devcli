@@ -19,6 +19,7 @@ import { createStandupPlugin } from '@devcli/plugin-standup'
 import { createContextPlugin } from '@devcli/plugin-context'
 import { createCleanPlugin } from '@devcli/plugin-clean'
 import { createCompletionPlugin } from '@devcli/plugin-completion'
+import { createChatPlugin } from '@devcli/plugin-chat'
 
 export function createRegistry(): PluginRegistry {
   const registry = new PluginRegistry()
@@ -40,6 +41,7 @@ export function createRegistry(): PluginRegistry {
     ['context', createContextPlugin],
     ['clean', createCleanPlugin],
     ['completion', createCompletionPlugin],
+    ['chat', createChatPlugin],
   ]
   for (const [name, factory] of plugins) {
     registry.register(name, factory)

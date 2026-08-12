@@ -27,6 +27,21 @@ export const DevCliConfigSchema = z.object({
       ignore: z.array(z.number()).default([]),
     })
     .optional(),
+  chat: z
+    .object({
+      permissions: z
+        .object({
+          read: z.enum(['allow', 'ask', 'deny']).optional(),
+          write: z.enum(['allow', 'ask', 'deny']).optional(),
+          edit: z.enum(['allow', 'ask', 'deny']).optional(),
+          bash: z.enum(['allow', 'ask', 'deny']).optional(),
+          grep: z.enum(['allow', 'ask', 'deny']).optional(),
+          glob: z.enum(['allow', 'ask', 'deny']).optional(),
+          list: z.enum(['allow', 'ask', 'deny']).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 })
 
 export type DevCliConfig = z.infer<typeof DevCliConfigSchema>

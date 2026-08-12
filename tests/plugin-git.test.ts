@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Command } from 'commander'
+import { childProcessMockFactory } from './helpers/child-process-mock'
 
-const execMock = vi.fn()
-vi.mock('node:child_process', () => ({ execSync: execMock }))
+const { execMock } = vi.hoisted(() => ({ execMock: vi.fn() }))
+vi.mock('node:child_process', () => childProcessMockFactory(execMock))
 
 const { createGitPlugin } = await import('../packages/plugins/git/src/index')
 

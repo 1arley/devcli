@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { Plugin, PluginFactory } from '@devcli/core'
-import { tryExec } from '@devcli/core'
+import { tryExec, listPorts } from '@devcli/core'
 import { infoBox, banner, symbols } from '@devcli/ui'
 import chalk from 'chalk'
 import { existsSync, readFileSync } from 'node:fs'
@@ -19,7 +19,7 @@ interface DockerInfo {
   names: string[]
 }
 
-interface PortInfo {
+interface ContextPort {
   port: string
   process: string
 }
@@ -51,17 +51,20 @@ function getDockerInfo(): DockerInfo | null {
   return { running: names.length, names }
 }
 
-function getPorts(): PortInfo[] {
-  const out = tryExec('lsof', ['-iTCP', '-sTCP:LISTEN', '-P', '-n'])
-  if (!out) return []
+/**
+ * Listening ports via the shared core logic (ss primary, lsof fallback).
+ * Dedupes by port so the dashboard doesn't show tcp/tcp6 duplicates.
+ */
+function getPorts(): ContextPort[] {
+  const all = listPorts()
+  const seen = new Set<string>()
+  const out: ContextPort[] = []
+  for (const p of all) {
+    if (seen.has(p.port)) continue
+    seen.add(p.port)
+    out.push({ port: p.port, process: p.process })
+  }
   return out
-    .split('\n')
-    .slice(1)
-    .map((line) => {
-      const parts = line.split(/\s+/)
-      return { port: (parts[8] ?? '').split(':').pop() ?? '', process: parts[0] ?? '' }
-    })
-    .filter((p) => p.port)
 }
 
 function getDepInfo(): DepsInfo | null {

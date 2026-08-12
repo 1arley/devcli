@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Command } from 'commander'
+import { childProcessMockFactory } from './helpers/child-process-mock'
 
-const execMock = vi.fn()
-vi.mock('node:child_process', () => ({ execSync: execMock }))
+const { execMock } = vi.hoisted(() => ({ execMock: vi.fn() }))
+vi.mock('node:child_process', () => childProcessMockFactory(execMock))
 
 const { createPortsPlugin } = await import('../packages/plugins/ports/src/index')
 
@@ -240,7 +241,8 @@ describe('killPort (unix)', () => {
     execMock.mockImplementation((cmd: string) => {
       if (cmd.startsWith('sleep')) return ''
       if (cmd.startsWith('kill')) return ''
-      if (cmd.startsWith('ss -tlnpH 2>/dev/null')) return ssListening
+      // portStillListening runs `ss -tlnpH` (no shell/no redirect)
+      if (cmd === 'ss -tlnpH') return ssListening
       if (cmd.includes('( dport')) return ssListening
       return '' // lsof/fuser empty → no pid from user's perspective
     })

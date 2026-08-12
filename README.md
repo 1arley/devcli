@@ -181,6 +181,94 @@ Explains errors, stack traces, and logs using AI. Works without configuration us
 }
 ```
 
+### `dev chat [prompt...]`
+
+Interactive AI coding agent — a terminal REPL with streaming responses, tool calling, file editing, and permission controls.
+
+```bash
+# Interactive REPL
+dev chat
+
+# One-shot mode (non-interactive)
+dev chat "refactor src/index.ts to use async/await"
+
+# Plan mode (read-only, no file modifications)
+dev chat --plan
+
+# Override model
+dev chat --model claude-sonnet-4-20250514
+
+# Auto-approve all tool permissions
+dev chat --auto
+```
+
+**Features:**
+- Streaming responses (SSE) for OpenAI, Anthropic, Gemini, and 7 other providers
+- 7 built-in tools: `read`, `write`, `edit`, `bash`, `grep`, `glob`, `list`
+- Two modes: `build` (full tool access) and `plan` (read-only)
+- Permission system: `allow`, `ask`, `deny` per tool
+- Session management: save, load, list, export conversations
+- Context manager: add files with `@filename`, run commands with `!command`
+- Custom agents via `.devcli/agents/*.md` with YAML frontmatter
+- AGENTS.md project instructions auto-loaded
+- Context compaction for long conversations (`/compact`)
+- ASCII art banners
+- Markdown rendering with syntax highlighting
+
+**Slash commands:**
+
+| Command | Description |
+|---|---|
+| `/file <path>` | Add file to context |
+| `/mode` | Toggle build/plan mode |
+| `/model [name]` | Set or show model |
+| `/save [name]` | Save current session |
+| `/load <name>` | Load a saved session |
+| `/sessions` | List saved sessions |
+| `/export` | Export conversation to markdown |
+| `/compact` | Compact conversation (summarize older messages) |
+| `/undo` | Undo last file change (git stash) |
+| `/init` | Generate AGENTS.md for this project |
+| `/clear` | Clear conversation context |
+| `/art [name]` | Show ASCII art (favicon/bodyicon/faceicon) |
+| `/help` | Show available commands |
+| `/exit` | Exit dev chat |
+
+**Inline shortcuts:**
+- `@filename` — Fuzzy search and add file to context
+- `!command` — Run shell command, add output to context
+
+**Permissions config** (`.devclirc.json`):
+
+```json
+{
+  "chat": {
+    "permissions": {
+      "read": "allow",
+      "write": "ask",
+      "edit": "ask",
+      "bash": "ask",
+      "grep": "allow",
+      "glob": "allow",
+      "list": "allow"
+    }
+  }
+}
+```
+
+**Custom agents** (`.devcli/agents/reviewer.md`):
+
+```markdown
+---
+name: reviewer
+description: Code review specialist focused on security and best practices
+---
+You are a code review specialist. Focus on:
+- Security vulnerabilities
+- Performance issues
+- Best practices violations
+```
+
 ## Configuration
 
 Create a `.devclirc.json` file in your home directory or project root:

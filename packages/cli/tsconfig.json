@@ -38,7 +38,9 @@
       "@devcli/plugin-clean": ["../plugins/clean/src"],
       "@devcli/plugin-clean/*": ["../plugins/clean/src/*"],
       "@devcli/plugin-completion": ["../plugins/completion/src"],
-      "@devcli/plugin-completion/*": ["../plugins/completion/src/*"]
+      "@devcli/plugin-completion/*": ["../plugins/completion/src/*"],
+      "@devcli/plugin-chat": ["../plugins/chat/src"],
+      "@devcli/plugin-chat/*": ["../plugins/chat/src/*"]
     },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]
