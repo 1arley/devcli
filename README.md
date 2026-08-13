@@ -35,6 +35,48 @@ yarn global add @1arley/devcli
 
 Requires Node.js 18+.
 
+### Standalone binary (no Node.js required)
+
+Single-executable binaries built with Node.js SEA are attached to every GitHub release:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/1arley/devcli/main/scripts/install.sh | bash
+
+# Custom install directory
+DEVCLI_INSTALL_DIR="$HOME/bin" bash <(curl -fsSL https://raw.githubusercontent.com/1arley/devcli/main/scripts/install.sh)
+
+# Specific version
+DEVCLI_VERSION=1.3.10 bash <(curl -fsSL https://raw.githubusercontent.com/1arley/devcli/main/scripts/install.sh)
+```
+
+Or download from the [latest release](https://github.com/1arley/devcli/releases/latest):
+`devcli-<version>-<platform>` for linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64.
+
+### Homebrew
+
+```bash
+brew tap 1arley/devcli
+brew install devcli
+```
+
+### Scoop (Windows)
+
+```bash
+scoop bucket add devcli https://github.com/1arley/devcli
+scoop install devcli
+```
+
+### Auto-update check
+
+Dev CLI checks npm for new versions in the background and shows a notice when an update is available. Disable with:
+
+```bash
+DEVCLI_NO_UPDATE_CHECK=1 dev ...
+```
+
+Check manually with `dev update` and add the release tag to the alerts by configuring `update.version` in `.devclirc.json`.
+
 ## Quick Start
 
 ```bash

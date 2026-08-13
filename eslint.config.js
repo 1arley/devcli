@@ -13,6 +13,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      '**/dist-sea/**',
       '**/node_modules/**',
       '**/coverage/**',
       '**/.next/**',

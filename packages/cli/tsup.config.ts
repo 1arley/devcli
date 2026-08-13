@@ -1,12 +1,16 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/fast-help.ts'],
   format: ['esm'],
   dts: false,
   clean: true,
   sourcemap: true,
   treeshake: true,
+  splitting: true,
+  minify: true,
+  target: 'es2022',
+  platform: 'node',
   noExternal: [
     '@devcli/core',
     '@devcli/config',

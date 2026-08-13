@@ -3,3 +3,6 @@ dist/
 coverage/
 pnpm-lock.yaml
 *.md
+*.sh
+scripts/dist/
+packages/cli/releases/

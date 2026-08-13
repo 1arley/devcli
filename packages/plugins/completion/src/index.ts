@@ -78,12 +78,49 @@ complete -F _dev_completions dev
 `
 }
 
+function generateFish(commands: string[]): string {
+  const completions = commands
+    .map((c) => `complete -c dev -n '__fish_use_subcommand' -a ${c} -d '${c} command'`)
+    .join('\n')
+  return `# fish completion for dev
+${completions}
+complete -c dev -l help -d 'Display help information'
+complete -c dev -l version -d 'Display version number'
+`
+}
+
+const INSTALL_HINTS: Record<string, string[]> = {
+  bash: [
+    'source <(dev completion bash)',
+    'dev completion bash >> ~/.bashrc',
+    'dev completion bash > /etc/bash_completion.d/dev',
+  ],
+  zsh: [
+    'source <(dev completion zsh)',
+    'dev completion zsh > ~/.oh-my-zsh/completions/_dev',
+    'dev completion zsh > ~/.zsh/completions/_dev',
+  ],
+  fish: [
+    'dev completion fish > ~/.config/fish/completions/dev.fish',
+    'source ~/.config/fish/completions/dev.fish',
+  ],
+}
+
 const manifest = {
   name: 'completion',
-  description: 'Generate shell completion scripts for bash and zsh',
+  description: 'Generate shell completion scripts for bash, zsh and fish',
   version: '0.0.0',
-  keywords: ['completion', 'shell', 'zsh', 'bash', 'autocomplete'],
+  keywords: ['completion', 'shell', 'zsh', 'bash', 'fish', 'autocomplete'],
   category: 'utility' as const,
+}
+
+function printInstallHints(shell: string) {
+  const hints = INSTALL_HINTS[shell] ?? []
+  if (hints.length === 0) return
+  console.log(`\n${chalk.dim('# Install:')}`)
+  for (const hint of hints) {
+    console.log(`${chalk.dim('#   ' + hint)}`)
+  }
 }
 
 export const createCompletionPlugin: PluginFactory = (): Plugin => ({
@@ -92,7 +129,7 @@ export const createCompletionPlugin: PluginFactory = (): Plugin => ({
     program
       .command('completion')
       .description(manifest.description)
-      .argument('[shell]', 'Shell type (zsh, bash)', 'zsh')
+      .argument('[shell]', 'Shell type (bash, zsh, fish)', 'zsh')
       .action((shell: string) => {
         const commands = getCommands()
         if (commands.length === 0) {
@@ -102,14 +139,15 @@ export const createCompletionPlugin: PluginFactory = (): Plugin => ({
 
         if (shell === 'zsh') {
           console.log(generateZsh(commands))
-          console.log(`\n${chalk.dim('# Install: source <(dev completion zsh)')}`)
-          console.log(`${chalk.dim('# Or: dev completion zsh > ~/.oh-my-zsh/completions/_dev')}`)
+          printInstallHints('zsh')
         } else if (shell === 'bash') {
           console.log(generateBash(commands))
-          console.log(`\n${chalk.dim('# Install: source <(dev completion bash)')}`)
-          console.log(`${chalk.dim('# Or: dev completion bash >> ~/.bashrc')}`)
+          printInstallHints('bash')
+        } else if (shell === 'fish') {
+          console.log(generateFish(commands))
+          printInstallHints('fish')
         } else {
-          console.log(`${symbols.error} Unsupported shell: ${shell}. Use zsh or bash.`)
+          console.log(`${symbols.error} Unsupported shell: ${shell}. Use bash, zsh or fish.`)
         }
       })
   },

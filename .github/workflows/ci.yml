@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Lint & Typecheck
@@ -99,5 +103,8 @@ jobs:
       - name: Build all packages
         run: pnpm build
 
-      - name: Verify CLI
+      - name: Verify CLI help
         run: node packages/cli/dist/index.js --help
+
+      - name: Verify CLI commands
+        run: node packages/cli/dist/index.js --version

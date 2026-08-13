@@ -1,0 +1,8 @@
+{
+  "main": "dist-sea/index.mjs",
+  "mainFormat": "module",
+  "output": "dist-sea/sea-prep.blob",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": false
+}

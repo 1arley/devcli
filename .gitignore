@@ -9,3 +9,7 @@ coverage/
 .DS_Store
 Thumbs.db
 .opencode/
+
+# SEA build artifacts
+packages/cli/dist-sea/
+packages/cli/releases/
