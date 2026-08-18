@@ -7,10 +7,10 @@ import { listSessions } from './session'
 
 const manifest = {
   name: 'chat',
-  description: 'AI coding agent — interactive REPL with streaming, tools, and permissions',
+  description: 'Interactive REPL with streaming, tools, and permissions',
   version: '0.0.0',
   keywords: ['chat', 'ai', 'agent', 'coding', 'assistant', 'repl', 'streaming', 'tools'],
-  category: 'ai' as const,
+  category: 'utility' as const,
 }
 
 export const createChatPlugin: PluginFactory = (): Plugin => ({

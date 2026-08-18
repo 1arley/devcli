@@ -11,7 +11,6 @@ import { createUuidPlugin } from '@devcli/plugin-uuid'
 import { createQrPlugin } from '@devcli/plugin-qr'
 import { createEnvPlugin } from '@devcli/plugin-env'
 import { createRepoPlugin } from '@devcli/plugin-repo'
-import { createAiPlugin } from '@devcli/plugin-ai'
 import { createSshPlugin } from '@devcli/plugin-ssh'
 import { createLogsPlugin } from '@devcli/plugin-logs'
 import { createPluginPluginFactory } from '@devcli/plugin-plugin'
@@ -34,7 +33,6 @@ export function createRegistry(): PluginRegistry {
     ['qr', createQrPlugin],
     ['env', createEnvPlugin],
     ['repo', createRepoPlugin],
-    ['ai', createAiPlugin],
     ['ssh', createSshPlugin],
     ['logs', createLogsPlugin],
     ['standup', createStandupPlugin],

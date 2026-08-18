@@ -33,7 +33,6 @@ export default defineConfig({
     '@devcli/plugin-qr',
     '@devcli/plugin-env',
     '@devcli/plugin-repo',
-    '@devcli/plugin-ai',
     '@devcli/plugin-ssh',
     '@devcli/plugin-logs',
     '@devcli/plugin-plugin',

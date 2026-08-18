@@ -14,7 +14,7 @@ describe('fast-help', () => {
 
   it('lists core commands', () => {
     const help = fastHelp()
-    for (const cmd of ['doctor', 'docker', 'git', 'json', 'uuid', 'qr', 'completion', 'chat']) {
+    for (const cmd of ['doctor', 'docker', 'git', 'json', 'uuid', 'qr', 'completion']) {
       expect(help).toContain(cmd)
     }
   })

@@ -32,7 +32,6 @@ Examples:
   $ dev qr                 Generate QR codes
   $ dev env                Environment variable management
   $ dev repo               Repository utilities
-  $ dev ai                 AI-powered commands
   $ dev ssh                SSH connection management
   $ dev logs               Log viewing and filtering
   $ dev standup            Daily standup generator

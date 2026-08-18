@@ -28,7 +28,7 @@ describe('chat plugin manifest', () => {
   it('registers with correct name', () => {
     const plugin = createChatPlugin()
     expect(plugin.manifest.name).toBe('chat')
-    expect(plugin.manifest.category).toBe('ai')
+    expect(plugin.manifest.category).toBe('utility')
     expect(plugin.manifest.keywords).toContain('repl')
   })
 })
@@ -37,7 +37,7 @@ describe('chat command', () => {
   it('registers chat command', () => {
     const chat = chatCmd()
     expect(chat.name()).toBe('chat')
-    expect(chat.description()).toContain('AI coding agent')
+    expect(chat.description()).toContain('Interactive REPL')
   })
 
   it('has --plan option', () => {

@@ -23,8 +23,6 @@
       "@devcli/plugin-env/*": ["../plugins/env/src/*"],
       "@devcli/plugin-repo": ["../plugins/repo/src"],
       "@devcli/plugin-repo/*": ["../plugins/repo/src/*"],
-      "@devcli/plugin-ai": ["../plugins/ai/src"],
-      "@devcli/plugin-ai/*": ["../plugins/ai/src/*"],
       "@devcli/plugin-ssh": ["../plugins/ssh/src"],
       "@devcli/plugin-ssh/*": ["../plugins/ssh/src/*"],
       "@devcli/plugin-logs": ["../plugins/logs/src"],

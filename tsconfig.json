@@ -27,7 +27,6 @@
     { "path": "packages/plugins/qr" },
     { "path": "packages/plugins/env" },
     { "path": "packages/plugins/repo" },
-    { "path": "packages/plugins/ai" },
     { "path": "packages/plugins/chat" }
   ]
 }

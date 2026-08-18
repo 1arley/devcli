@@ -25,7 +25,6 @@ const COMMANDS: [string, string][] = [
   ['qr', 'Generate scannable QR codes in the terminal'],
   ['env', 'Compare .env and .env.example, detect missing variables'],
   ['repo', 'Analyze a project: framework, language, dependencies, architecture'],
-  ['ai', 'AI-powered developer tools: explain, commit, review, chat'],
   ['ssh', 'SSH connection manager: list, connect, and manage hosts'],
   ['logs', 'Aggregated log viewer for system, Docker, and PM2 logs'],
   ['standup', 'Generate markdown standup notes from git commits'],
@@ -33,7 +32,6 @@ const COMMANDS: [string, string][] = [
   ['clean', 'Clean project artifacts'],
   ['completion', 'Generate shell completion scripts for bash, zsh and fish'],
   ['plugin', 'Manage plugins'],
-  ['chat', 'Chat with an AI assistant'],
 ]
 
 export function fastHelp(): string {

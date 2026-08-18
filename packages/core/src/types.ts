@@ -15,7 +15,7 @@ export interface PluginManifest {
 }
 
 export type PluginCategory =
-  'dev' | 'docker' | 'git' | 'security' | 'data' | 'utility' | 'infra' | 'ai' | 'env'
+  'dev' | 'docker' | 'git' | 'security' | 'data' | 'utility' | 'infra' | 'env'
 
 export interface Plugin {
   manifest: PluginManifest

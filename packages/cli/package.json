@@ -47,7 +47,6 @@
   "dependencies": {
     "@devcli/config": "workspace:*",
     "@devcli/core": "workspace:*",
-    "@devcli/plugin-ai": "workspace:*",
     "@devcli/plugin-chat": "workspace:*",
     "@devcli/plugin-clean": "workspace:*",
     "@devcli/plugin-completion": "workspace:*",
